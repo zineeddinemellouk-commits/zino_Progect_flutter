@@ -1,6 +1,6 @@
-# test
+# zino_Progect_flutter
 
-A new Flutter project.
+Attendance app built with Flutter.
 
 ## Getting Started
 

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../department_dashboard.dart';
+import 'AddStudent.dart';
+import 'AddTeacher.dart';
+import 'AddSubject.dart';
+import 'ViewStudent.dart';
 
 class VewJustification extends StatefulWidget {
   const VewJustification({super.key});
@@ -194,19 +198,31 @@ class _VewJustificationState extends State<VewJustification> {
               }),
               _drawerItem(Icons.person_add, "Add Student", () {
                 Navigator.pop(context);
-                // Navigate to AddStudent
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddStudent()),
+                );
               }),
               _drawerItem(Icons.school, "Add Teacher", () {
                 Navigator.pop(context);
-                // Navigate to AddTeacher
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddTeacher()),
+                );
               }),
               _drawerItem(Icons.subject, "Add Subject", () {
                 Navigator.pop(context);
-                // Navigate to AddSubject
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddSubject()),
+                );
               }),
               _drawerItem(Icons.people, "View Students", () {
                 Navigator.pop(context);
-                // Navigate to ViewStudent
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ViewStudent()),
+                );
               }),
               _drawerItem(Icons.visibility, "View Justification", () {
                 Navigator.pop(context);
@@ -217,20 +233,6 @@ class _VewJustificationState extends State<VewJustification> {
       ),
       body: Stack(
         children: [
-          // Subtle background logo
-          Positioned(
-            top: 100,
-            right: -50,
-            child: Opacity(
-              opacity: 0.05,
-              child: Image.asset(
-                'assets/images/PixVerse_Image_Effect_prompt_invsibel backgrou.jpg',
-                width: 200,
-                height: 200,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -467,6 +469,7 @@ class _VewJustificationState extends State<VewJustification> {
                 break;
               case 1:
                 // Navigate to ViewStudent
+                
                 break;
               case 2:
                 // Already on requests page

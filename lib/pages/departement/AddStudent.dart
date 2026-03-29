@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:test/models/group_model.dart';
+import 'package:test/models/level_model.dart';
+import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'common_widgets.dart';
 
 class AddStudent extends StatefulWidget {
@@ -12,33 +16,62 @@ class _AddStudentState extends State<AddStudent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _idController = TextEditingController();
+  final _attendanceController = TextEditingController(text: '0');
 
-  String? _selectedLevel;
-  String? _selectedGroup;
-
-  final List<String> _levels = ['L1', 'L2', 'L3', 'M1', 'M2'];
-  final List<String> _groups = List.generate(
-    10,
-    (index) => (index + 1).toString(),
-  );
+  String? _selectedLevelId;
+  String? _selectedGroupId;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _idController.dispose();
+    _attendanceController.dispose();
     super.dispose();
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      // Here you would typically save the student data
+  Future<void> _submitForm() async {
+    if (_formKey.currentState?.validate() != true) return;
+
+    final attendanceValue = int.tryParse(_attendanceController.text.trim());
+    if (attendanceValue == null ||
+        attendanceValue < 0 ||
+        attendanceValue > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attendance must be between 0 and 100.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await context.read<StudentManagementProvider>().addStudent(
+        fullName: _nameController.text,
+        email: _emailController.text,
+        attendancePercentage: attendanceValue,
+        groupId: _selectedGroupId!,
+        levelId: _selectedLevelId,
+      );
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Student added successfully!')),
       );
-      // Navigate back or to another page
       Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Failed to add student. Please check network and retry.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -50,19 +83,6 @@ class _AddStudentState extends State<AddStudent> {
       drawer: departmentDrawer(context),
       body: Stack(
         children: [
-          Positioned(
-            top: 100,
-            right: -20,
-            child: Opacity(
-              opacity: 0.05,
-              child: Image.asset(
-                'assets/images/PixVerse_Image_Effect_prompt_invsibel backgrou.jpg',
-                width: 220,
-                height: 220,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -151,76 +171,162 @@ class _AddStudentState extends State<AddStudent> {
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
-                          controller: _idController,
+                          controller: _attendanceController,
+                          keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Student ID',
+                            labelText: 'Attendance %',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.badge),
+                            prefixIcon: Icon(Icons.percent),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter the student ID';
+                            final parsed = int.tryParse(value?.trim() ?? '');
+                            if (parsed == null) {
+                              return 'Please enter a number';
+                            }
+                            if (parsed < 0 || parsed > 100) {
+                              return 'Value must be from 0 to 100';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedLevel,
-                          decoration: const InputDecoration(
-                            labelText: 'Level of Study',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.school),
-                          ),
-                          items: _levels.map((level) {
-                            return DropdownMenuItem(
-                              value: level,
-                              child: Text(level),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedLevel = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Please select a level of study';
+                        StreamBuilder<List<LevelModel>>(
+                          stream: context
+                              .read<StudentManagementProvider>()
+                              .watchLevels(),
+                          builder: (context, levelSnapshot) {
+                            if (levelSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
                             }
-                            return null;
+
+                            if (levelSnapshot.hasError) {
+                              return Text(
+                                'Unable to load levels. Check your connection.',
+                                style: TextStyle(color: Colors.red.shade700),
+                              );
+                            }
+
+                            final levels = levelSnapshot.data ?? const [];
+
+                            if (levels.isEmpty) {
+                              return Text(
+                                'No levels available. Please create levels first.',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              );
+                            }
+
+                            final hasSelectedLevel = levels.any(
+                              (level) => level.id == _selectedLevelId,
+                            );
+                            if (!hasSelectedLevel) {
+                              _selectedLevelId = null;
+                              _selectedGroupId = null;
+                            }
+
+                            return DropdownButtonFormField<String>(
+                              initialValue: _selectedLevelId,
+                              decoration: const InputDecoration(
+                                labelText: 'Level of Study',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.school),
+                              ),
+                              items: levels.map((level) {
+                                return DropdownMenuItem(
+                                  value: level.id,
+                                  child: Text(level.name),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedLevelId = value;
+                                  _selectedGroupId = null;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null) {
+                                  return 'Please select a level of study';
+                                }
+                                return null;
+                              },
+                            );
                           },
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedGroup,
-                          decoration: const InputDecoration(
-                            labelText: 'Group',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.group),
+                        if (_selectedLevelId != null)
+                          StreamBuilder<List<GroupModel>>(
+                            stream: context
+                                .read<StudentManagementProvider>()
+                                .watchGroupsByLevel(_selectedLevelId!),
+                            builder: (context, groupSnapshot) {
+                              if (groupSnapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              if (groupSnapshot.hasError) {
+                                return Text(
+                                  'Unable to load groups for selected level.',
+                                  style: TextStyle(color: Colors.red.shade700),
+                                );
+                              }
+
+                              final groups = groupSnapshot.data ?? const [];
+                              if (groups.isEmpty) {
+                                return Text(
+                                  'No groups found for selected level.',
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                );
+                              }
+
+                              final hasSelectedGroup = groups.any(
+                                (group) => group.id == _selectedGroupId,
+                              );
+                              if (!hasSelectedGroup) {
+                                _selectedGroupId = null;
+                              }
+
+                              return DropdownButtonFormField<String>(
+                                initialValue: _selectedGroupId,
+                                decoration: const InputDecoration(
+                                  labelText: 'Group',
+                                  border: OutlineInputBorder(),
+                                  prefixIcon: Icon(Icons.group),
+                                ),
+                                items: groups.map((group) {
+                                  return DropdownMenuItem(
+                                    value: group.id,
+                                    child: Text(group.name),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGroupId = value;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null) {
+                                    return 'Please select a group';
+                                  }
+                                  return null;
+                                },
+                              );
+                            },
+                          )
+                        else
+                          Text(
+                            'Select level first to load groups.',
+                            style: TextStyle(color: Colors.grey.shade700),
                           ),
-                          items: _groups.map((group) {
-                            return DropdownMenuItem(
-                              value: group,
-                              child: Text('Group $group'),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedGroup = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Please select a group';
-                            }
-                            return null;
-                          },
-                        ),
                         const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _submitForm,
+                            onPressed: _isSubmitting ? null : _submitForm,
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: const Color(0xFF2563EB),
@@ -228,13 +334,22 @@ class _AddStudentState extends State<AddStudent> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            child: const Text(
-                              'Add Student',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Add Student',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],

@@ -1,6 +1,8 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:test/pages/department_dashboard.dart';
+import "department_dashboard.dart" show DepartmentDashboard;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -146,6 +148,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       width: size,
       height: size,
       decoration: BoxDecoration(
+        // ignore: duplicate_ignore
+        // ignore: deprecated_member_use
         color: color.withOpacity(0.3),
         shape: BoxShape.circle,
       ),

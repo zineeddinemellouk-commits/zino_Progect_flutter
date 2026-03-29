@@ -136,10 +136,7 @@ Drawer departmentDrawer(BuildContext context) {
           }),
           _drawerItem(context, Icons.people, "View Students", () {
             Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ViewStudent()),
-            );
+            Navigator.pushNamed(context, ViewStudent.routeName);
           }),
           _drawerItem(context, Icons.visibility, "View Justification", () {
             Navigator.pop(context);
@@ -210,8 +207,7 @@ Widget departmentBottomNav(BuildContext context, int currentIndex) {
                 MaterialPageRoute(builder: (context) => const DepartmentDashboard()));
             break;
           case 1:
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const ViewStudent()));
+            Navigator.pushReplacementNamed(context, ViewStudent.routeName);
             break;
           case 2:
             Navigator.pushReplacement(context,

@@ -86,19 +86,6 @@ class _AddSubjectState extends State<AddSubject> {
       drawer: departmentDrawer(context),
       body: Stack(
         children: [
-          Positioned(
-            top: 100,
-            right: -20,
-            child: Opacity(
-              opacity: 0.05,
-              child: Image.asset(
-                'assets/images/PixVerse_Image_Effect_prompt_invsibel backgrou.jpg',
-                width: 220,
-                height: 220,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Form(

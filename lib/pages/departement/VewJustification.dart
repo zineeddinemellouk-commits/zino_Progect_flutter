@@ -468,14 +468,18 @@ class _VewJustificationState extends State<VewJustification> {
                 );
                 break;
               case 1:
-                // Navigate to ViewStudent
-                
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ViewStudent()),
+                );
                 break;
               case 2:
                 // Already on requests page
                 break;
               case 3:
-                // Navigate to settings
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Settings page coming soon.')),
+                );
                 break;
             }
           },

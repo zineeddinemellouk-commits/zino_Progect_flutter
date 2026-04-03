@@ -47,8 +47,8 @@ class _AddStudentState extends State<AddStudent> {
 
     try {
       await context.read<StudentManagementProvider>().addStudent(
-        fullName: _nameController.text,
-        email: _emailController.text,
+        fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
         attendancePercentage: attendanceValue,
         groupId: _selectedGroupId!,
         levelId: _selectedLevelId,
@@ -56,16 +56,16 @@ class _AddStudentState extends State<AddStudent> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Student added successfully!')),
+        const SnackBar(content: Text('✅ Student added successfully!')),
       );
       Navigator.pop(context);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      print('❌ Error adding student: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Failed to add student. Please check network and retry.',
-          ),
+        SnackBar(
+          content: Text('❌ Failed to add student: ${e.toString()}'),
+          backgroundColor: Colors.red.shade700,
         ),
       );
     } finally {
@@ -136,14 +136,18 @@ class _AddStudentState extends State<AddStudent> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _nameController,
+                          enabled: !_isSubmitting,
                           decoration: const InputDecoration(
                             labelText: 'Full Name',
                             border: OutlineInputBorder(),
                             prefixIcon: Icon(Icons.person),
                           ),
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Please enter the student name';
+                            }
+                            if (value.length < 2) {
+                              return 'Name must be at least 2 characters';
                             }
                             return null;
                           },
@@ -151,6 +155,7 @@ class _AddStudentState extends State<AddStudent> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _emailController,
+                          enabled: !_isSubmitting,
                           decoration: const InputDecoration(
                             labelText: 'Email Address',
                             border: OutlineInputBorder(),
@@ -162,7 +167,7 @@ class _AddStudentState extends State<AddStudent> {
                               return 'Please enter an email address';
                             }
                             if (!RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
                             ).hasMatch(value)) {
                               return 'Please enter a valid email address';
                             }
@@ -172,6 +177,7 @@ class _AddStudentState extends State<AddStudent> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _attendanceController,
+                          enabled: !_isSubmitting,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
                             labelText: 'Attendance %',
@@ -221,13 +227,22 @@ class _AddStudentState extends State<AddStudent> {
                             final hasSelectedLevel = levels.any(
                               (level) => level.id == _selectedLevelId,
                             );
-                            if (!hasSelectedLevel) {
-                              _selectedLevelId = null;
-                              _selectedGroupId = null;
+                            
+                            if (!hasSelectedLevel && _selectedLevelId != null) {
+                              WidgetsBinding.instance
+                                  .addPostFrameCallback((_) {
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedLevelId = null;
+                                    _selectedGroupId = null;
+                                  });
+                                }
+                              });
                             }
 
                             return DropdownButtonFormField<String>(
                               initialValue: _selectedLevelId,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Level of Study',
                                 border: OutlineInputBorder(),
@@ -239,12 +254,14 @@ class _AddStudentState extends State<AddStudent> {
                                   child: Text(level.name),
                                 );
                               }).toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedLevelId = value;
-                                  _selectedGroupId = null;
-                                });
-                              },
+                              onChanged: _isSubmitting
+                                  ? null
+                                  : (value) {
+                                      setState(() {
+                                        _selectedLevelId = value;
+                                        _selectedGroupId = null;
+                                      });
+                                    },
                               validator: (value) {
                                 if (value == null) {
                                   return 'Please select a level of study';
@@ -259,7 +276,7 @@ class _AddStudentState extends State<AddStudent> {
                           StreamBuilder<List<GroupModel>>(
                             stream: context
                                 .read<StudentManagementProvider>()
-                                .watchGroupsByLevel(_selectedLevelId!),
+                              .watchGroupsByLevel(levelId: _selectedLevelId!),
                             builder: (context, groupSnapshot) {
                               if (groupSnapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -286,12 +303,21 @@ class _AddStudentState extends State<AddStudent> {
                               final hasSelectedGroup = groups.any(
                                 (group) => group.id == _selectedGroupId,
                               );
-                              if (!hasSelectedGroup) {
-                                _selectedGroupId = null;
+                              
+                              if (!hasSelectedGroup && _selectedGroupId != null) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    setState(() {
+                                      _selectedGroupId = null;
+                                    });
+                                  }
+                                });
                               }
 
                               return DropdownButtonFormField<String>(
                                 initialValue: _selectedGroupId,
+                                isExpanded: true,
                                 decoration: const InputDecoration(
                                   labelText: 'Group',
                                   border: OutlineInputBorder(),
@@ -303,11 +329,13 @@ class _AddStudentState extends State<AddStudent> {
                                     child: Text(group.name),
                                   );
                                 }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGroupId = value;
-                                  });
-                                },
+                                onChanged: _isSubmitting
+                                    ? null
+                                    : (value) {
+                                        setState(() {
+                                          _selectedGroupId = value;
+                                        });
+                                      },
                                 validator: (value) {
                                   if (value == null) {
                                     return 'Please select a group';
@@ -318,9 +346,15 @@ class _AddStudentState extends State<AddStudent> {
                             },
                           )
                         else
-                          Text(
-                            'Select level first to load groups.',
-                            style: TextStyle(color: Colors.grey.shade700),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Text(
+                              'Select level first to load groups.',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 14,
+                              ),
+                            ),
                           ),
                         const SizedBox(height: 30),
                         SizedBox(
@@ -330,6 +364,7 @@ class _AddStudentState extends State<AddStudent> {
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: const Color(0xFF2563EB),
+                              disabledBackgroundColor: Colors.grey.shade400,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -348,6 +383,7 @@ class _AddStudentState extends State<AddStudent> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
+                                      color: Colors.white,
                                     ),
                                   ),
                           ),

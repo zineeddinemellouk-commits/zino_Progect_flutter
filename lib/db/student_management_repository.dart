@@ -1,38 +1,43 @@
 import 'package:test/models/group_model.dart';
 import 'package:test/models/level_model.dart';
 import 'package:test/models/student_model.dart';
-import 'package:test/services/firestore_service.dart';
+import 'package:test/services/local_data_service.dart';
 
 class StudentManagementRepository {
-  StudentManagementRepository({FirestoreService? firestoreService})
-    : _firestoreService = firestoreService ?? FirestoreService();
+  StudentManagementRepository({LocalDataService? localDataService})
+    : _localDataService = localDataService ?? LocalDataService();
 
-  final FirestoreService _firestoreService;
+  final LocalDataService _localDataService;
 
   Stream<List<LevelModel>> watchLevels() {
-    return _firestoreService.watchLevels();
+    // Placeholder data source (database removed)
+    return _localDataService.watchLevels();
   }
 
-  Stream<List<GroupModel>> watchGroupsByLevel(String levelId) {
-    return _firestoreService.watchGroupsByLevel(levelId);
+  Stream<List<GroupModel>> watchGroupsByLevel({required String levelId}) {
+    // Placeholder data source (database removed)
+    return _localDataService.watchGroupsByLevel(levelId);
   }
 
   Stream<List<StudentModel>> watchStudentsByGroup({required String groupId}) {
-    return _firestoreService.watchStudentsByGroup(groupId);
+    // Placeholder data source (database removed)
+    return _localDataService.watchStudentsByGroup(groupId);
   }
 
-  Future<void> addGroup({required String name, required String levelId}) {
-    return _firestoreService.addGroup(name: name, levelId: levelId);
+  Future<String> addGroup({required String name, required String levelId}) {
+    // Placeholder write action (database removed)
+    return _localDataService.addGroup(name: name, levelId: levelId);
   }
 
-  Future<void> addStudent({
+  Future<String> addStudent({
     required String fullName,
     required String email,
     required int attendancePercentage,
     required String groupId,
     String? levelId,
   }) {
-    return _firestoreService.addStudent(
+    // Placeholder write action (database removed)
+    return _localDataService.addStudent(
       fullName: fullName,
       email: email,
       attendancePercentage: attendancePercentage,

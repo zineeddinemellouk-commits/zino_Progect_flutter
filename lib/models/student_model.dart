@@ -17,17 +17,6 @@ class StudentModel {
   final String? groupName;
   final String? levelId;
 
-  factory StudentModel.fromMap(String id, Map<String, dynamic> map) {
-    return StudentModel(
-      id: id,
-      fullName: (map['fullName'] as String?)?.trim() ?? '',
-      email: (map['email'] as String?)?.trim() ?? '',
-      attendancePercentage: (map['attendancePercentage'] as num?)?.round() ?? 0,
-      groupId: (map['groupId'] as String?)?.trim() ?? '',
-      levelId: (map['levelId'] as String?)?.trim(),
-    );
-  }
-
   StudentModel copyWith({
     String? id,
     String? fullName,
@@ -48,13 +37,4 @@ class StudentModel {
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'fullName': fullName,
-      'email': email,
-      'attendancePercentage': attendancePercentage,
-      'groupId': groupId,
-      if (levelId != null && levelId!.isNotEmpty) 'levelId': levelId,
-    };
-  }
 }

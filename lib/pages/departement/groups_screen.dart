@@ -145,7 +145,7 @@ class GroupsScreen extends StatelessWidget {
               child: StreamBuilder(
                 stream: context
                     .read<StudentManagementProvider>()
-                    .watchGroupsByLevel(level.id),
+                  .watchGroupsByLevel(levelId: level.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());

@@ -1,5 +1,9 @@
 // create the AddSubject page with a form to add a new subject to the department
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:test/models/class_model.dart';
+import 'package:test/models/teacher_model.dart';
+import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'common_widgets.dart';
 
 class AddSubject extends StatefulWidget {
@@ -12,23 +16,9 @@ class AddSubject extends StatefulWidget {
 class _AddSubjectState extends State<AddSubject> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _subjectNameController = TextEditingController();
-
-  final List<String> _allTeachers = [
-    'Dr. Smith',
-    'Prof. Ahmed',
-    'Dr. Johnson',
-    'Prof. Carter',
-  ];
-
   final List<String> _selectedTeachers = [];
-
-  final Map<String, bool> _levels = {
-    'Licence 1': false,
-    'Licence 2': false,
-    'Licence 3': false,
-    'Master 1': false,
-    'Master 2': false,
-  };
+  final Map<String, bool> _selectedClasses = {};
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -36,46 +26,55 @@ class _AddSubjectState extends State<AddSubject> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
 
     final subjectName = _subjectNameController.text.trim();
-    final selectedLevels = _levels.entries
+    final selectedClassIds = _selectedClasses.entries
         .where((entry) => entry.value)
         .map((entry) => entry.key)
         .toList();
 
-    if (_selectedTeachers.isEmpty) {
+    if (_selectedTeachers.length > 1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one teacher.')),
+        const SnackBar(content: Text('Please select only one teacher.')),
       );
       return;
     }
 
-    if (selectedLevels.isEmpty) {
+    if (selectedClassIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one level.')),
+        const SnackBar(content: Text('Please select at least one class.')),
       );
       return;
     }
 
-    // TODO: connect this data to database or backend.
-    final createdSubject = {
-      'subjectName': subjectName,
-      'teachers': _selectedTeachers,
-      'levels': selectedLevels,
-    };
+    setState(() => _isSaving = true);
+    try {
+      await context.read<StudentManagementProvider>().addSubject(
+        name: subjectName,
+        teacherId: _selectedTeachers.isNotEmpty ? _selectedTeachers.first : '',
+        classIds: selectedClassIds,
+      );
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Subject created: $createdSubject')));
-
-    _formKey.currentState?.reset();
-    _subjectNameController.clear();
-    setState(() {
-      _selectedTeachers.clear();
-      _levels.updateAll((key, value) => false);
-    });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Subject created successfully!')),
+      );
+      _formKey.currentState?.reset();
+      _subjectNameController.clear();
+      setState(() {
+        _selectedTeachers.clear();
+        _selectedClasses.updateAll((key, value) => false);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create subject: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -152,55 +151,93 @@ class _AddSubjectState extends State<AddSubject> {
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'Assign Teachers',
+                          'Assign Teacher (Optional)',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _allTeachers.map((teacher) {
-                            final selected = _selectedTeachers.contains(
-                              teacher,
+                        StreamBuilder<List<TeacherModel>>(
+                          stream: context
+                              .watch<StudentManagementProvider>()
+                              .watchTeachers(),
+                          builder: (context, snapshot) {
+                            final teachers = snapshot.data ?? const <TeacherModel>[];
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const LinearProgressIndicator();
+                            }
+                            if (teachers.isEmpty) {
+                              return const Text(
+                                'No teachers found. You can still create the subject.',
+                              );
+                            }
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: teachers.map((teacher) {
+                                final selected = _selectedTeachers.contains(teacher.id);
+                                return FilterChip(
+                                  label: Text(teacher.fullName),
+                                  selected: selected,
+                                  onSelected: (isSelected) {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedTeachers.add(teacher.id);
+                                      } else {
+                                        _selectedTeachers.remove(teacher.id);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                             );
-                            return FilterChip(
-                              label: Text(teacher),
-                              selected: selected,
-                              onSelected: (isSelected) {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedTeachers.add(teacher);
-                                  } else {
-                                    _selectedTeachers.remove(teacher);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                          },
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Levels',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        const Text('Levels', style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
-                        ..._levels.keys.map((level) {
-                          return CheckboxListTile(
-                            title: Text(level),
-                            value: _levels[level],
-                            onChanged: (value) {
-                              setState(() {
-                                _levels[level] = value ?? false;
-                              });
-                            },
-                          );
-                        }),
+                        StreamBuilder<List<ClassModel>>(
+                          stream: context
+                              .watch<StudentManagementProvider>()
+                              .watchClasses(),
+                          builder: (context, snapshot) {
+                            final classes = snapshot.data ?? const <ClassModel>[];
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const LinearProgressIndicator();
+                            }
+                            if (classes.isEmpty) {
+                              return const Text('No classes found.');
+                            }
+                            for (final c in classes) {
+                              _selectedClasses.putIfAbsent(c.id, () => false);
+                            }
+                            return Column(
+                              children: classes
+                                  .map(
+                                    (c) => CheckboxListTile(
+                                      title: Text(c.name),
+                                      value: _selectedClasses[c.id] ?? false,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _selectedClasses[c.id] = value ?? false;
+                                        });
+                                      },
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+                          },
+                        ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: _submit,
-                            child: const Text('Create Subject'),
+                            onPressed: _isSaving ? null : _submit,
+                            child: _isSaving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Text('Create Subject'),
                           ),
                         ),
                       ],

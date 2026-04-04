@@ -16,6 +16,8 @@ class _AddStudentState extends State<AddStudent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _attendanceController = TextEditingController(text: '0');
 
   String? _selectedLevelId;
@@ -26,6 +28,8 @@ class _AddStudentState extends State<AddStudent> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _attendanceController.dispose();
     super.dispose();
   }
@@ -49,6 +53,7 @@ class _AddStudentState extends State<AddStudent> {
       await context.read<StudentManagementProvider>().addStudent(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        password: _passwordController.text,
         attendancePercentage: attendanceValue,
         groupId: _selectedGroupId!,
         levelId: _selectedLevelId,
@@ -176,6 +181,46 @@ class _AddStudentState extends State<AddStudent> {
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
+                          controller: _passwordController,
+                          enabled: !_isSubmitting,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Password',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.lock),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter a password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          enabled: !_isSubmitting,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Confirm Password',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please confirm the password';
+                            }
+                            if (value != _passwordController.text) {
+                              return 'Passwords do not match';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
                           controller: _attendanceController,
                           enabled: !_isSubmitting,
                           keyboardType: TextInputType.number,
@@ -227,10 +272,9 @@ class _AddStudentState extends State<AddStudent> {
                             final hasSelectedLevel = levels.any(
                               (level) => level.id == _selectedLevelId,
                             );
-                            
+
                             if (!hasSelectedLevel && _selectedLevelId != null) {
-                              WidgetsBinding.instance
-                                  .addPostFrameCallback((_) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted) {
                                   setState(() {
                                     _selectedLevelId = null;
@@ -276,7 +320,7 @@ class _AddStudentState extends State<AddStudent> {
                           StreamBuilder<List<GroupModel>>(
                             stream: context
                                 .read<StudentManagementProvider>()
-                              .watchGroupsByLevel(levelId: _selectedLevelId!),
+                                .watchGroupsByLevel(levelId: _selectedLevelId!),
                             builder: (context, groupSnapshot) {
                               if (groupSnapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -303,10 +347,12 @@ class _AddStudentState extends State<AddStudent> {
                               final hasSelectedGroup = groups.any(
                                 (group) => group.id == _selectedGroupId,
                               );
-                              
-                              if (!hasSelectedGroup && _selectedGroupId != null) {
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
+
+                              if (!hasSelectedGroup &&
+                                  _selectedGroupId != null) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
                                   if (mounted) {
                                     setState(() {
                                       _selectedGroupId = null;

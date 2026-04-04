@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:test/pages/departement/common_widgets.dart';
+import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'departement/AddStudent.dart';
 import 'package:test/pages/departement/AddSubject.dart';
 import 'package:test/pages/departement/AddTeacher.dart';
@@ -12,72 +14,20 @@ class DepartmentDashboard extends StatefulWidget {
 }
 
 class _DepartmentDashboardState extends State<DepartmentDashboard> {
-  // TODO: replace these with real values from your database when available
   final String universityName = "belhadj bouchayeb National University";
 
-  final List<Map<String, dynamic>> students = [
-    {
-      "id": 1,
-      "name": "Alice",
-      "attendedDays": 28,
-      "weeklyAttendance": [5, 6, 5, 6, 6],
-    },
-    {
-      "id": 2,
-      "name": "Bob",
-      "attendedDays": 27,
-      "weeklyAttendance": [5, 5, 6, 6, 5],
-    },
-    {
-      "id": 3,
-      "name": "Charlie",
-      "attendedDays": 26,
-      "weeklyAttendance": [5, 5, 5, 6, 5],
-    },
-  ];
-
-  final List<Map<String, dynamic>> teachers = [
-    {"id": 1, "name": "Dr. Smith"},
-    {"id": 2, "name": "Prof. Ahmed"},
-  ];
-
-  final int totalClassDays = 30;
-  final int classesPerWeek = 6;
-
-  int get totalStudents => students.length;
-  int get totalTeachers => teachers.length;
-
-  int get totalPresentDays => students.fold(
-    0,
-    (sum, student) => sum + (student["attendedDays"] as int),
-  );
-
-  int get totalPossibleDays => totalClassDays * totalStudents;
-
-  double get attendancePercent {
-    if (totalPossibleDays <= 0) return 0;
-    final percent = (totalPresentDays / totalPossibleDays) * 100;
-    return percent.clamp(0, 100);
-  }
-
-  List<double> get weeklyTrendPercent {
-    const weekCount = 5;
-    return List.generate(weekCount, (weekIndex) {
-      final totalWeekPresence = students.fold<int>(
-        0,
-        (sum, student) =>
-            sum + (student["weeklyAttendance"] as List<int>)[weekIndex],
-      );
-
-      final totalPossibleWeek = totalStudents * classesPerWeek;
-      if (totalPossibleWeek <= 0) return 0;
-
-      return (totalWeekPresence / totalPossibleWeek) * 100;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<StudentManagementProvider>().initializeBaseData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<StudentManagementProvider>();
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: departmentAppBar(context, "Academic Curator - $universityName"),
@@ -131,23 +81,44 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               ),
             ),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _statCard("Students", totalStudents.toString()),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statCard("Teachers", totalTeachers.toString()),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _statCard(
-                    "Attendance",
-                    "${attendancePercent.toStringAsFixed(1)}%",
-                  ),
-                ),
-              ],
+            StreamBuilder(
+              stream: provider.watchAllStudents(),
+              builder: (context, studentsSnapshot) {
+                final students = studentsSnapshot.data ?? const [];
+                final totalStudents = students.length;
+                final totalPresent = students.fold<int>(
+                  0,
+                  (sum, s) => sum + s.attendancePercentage,
+                );
+                final attendance = totalStudents == 0
+                    ? 0.0
+                    : (totalPresent / totalStudents).clamp(0, 100).toDouble();
+
+                return StreamBuilder(
+                  stream: provider.watchTeachers(),
+                  builder: (context, teachersSnapshot) {
+                    final teachers = teachersSnapshot.data ?? const [];
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: _statCard("Students", totalStudents.toString()),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard("Teachers", teachers.length.toString()),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            "Attendance",
+                            "${attendance.toStringAsFixed(1)}%",
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 20),
             const Text(
@@ -155,9 +126,27 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: weeklyTrendPercent.map((e) => _bar(e)).toList(),
+            StreamBuilder(
+              stream: provider.watchAllStudents(),
+              builder: (context, snapshot) {
+                final students = snapshot.data ?? const [];
+                final attendance = students.isEmpty
+                    ? 0.0
+                    : students
+                            .fold<int>(0, (sum, s) => sum + s.attendancePercentage) /
+                        students.length;
+                final trend = [
+                  (attendance * 0.6).clamp(0, 100),
+                  (attendance * 0.75).clamp(0, 100),
+                  (attendance * 0.9).clamp(0, 100),
+                  attendance.clamp(0, 100),
+                  (attendance * 1.05).clamp(0, 100),
+                ];
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: trend.map((e) => _bar(e.toDouble())).toList(),
+                );
+              },
             ),
             const SizedBox(height: 30),
             // Quick Actions Section

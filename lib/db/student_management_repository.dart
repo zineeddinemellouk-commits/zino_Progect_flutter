@@ -1,32 +1,28 @@
 import 'package:test/models/group_model.dart';
 import 'package:test/models/level_model.dart';
 import 'package:test/models/student_model.dart';
-import 'package:test/services/local_data_service.dart';
+import 'package:test/services/firestore_service.dart';
 
 class StudentManagementRepository {
-  StudentManagementRepository({LocalDataService? localDataService})
-    : _localDataService = localDataService ?? LocalDataService();
+  StudentManagementRepository({FirestoreService? firestoreService})
+    : _firestoreService = firestoreService ?? FirestoreService();
 
-  final LocalDataService _localDataService;
+  final FirestoreService _firestoreService;
 
   Stream<List<LevelModel>> watchLevels() {
-    // Placeholder data source (database removed)
-    return _localDataService.watchLevels();
+    return _firestoreService.watchLevels();
   }
 
   Stream<List<GroupModel>> watchGroupsByLevel({required String levelId}) {
-    // Placeholder data source (database removed)
-    return _localDataService.watchGroupsByLevel(levelId);
+    return _firestoreService.watchGroupsByLevel(levelId);
   }
 
   Stream<List<StudentModel>> watchStudentsByGroup({required String groupId}) {
-    // Placeholder data source (database removed)
-    return _localDataService.watchStudentsByGroup(groupId);
+    return _firestoreService.watchStudentsByGroup(groupId);
   }
 
   Future<String> addGroup({required String name, required String levelId}) {
-    // Placeholder write action (database removed)
-    return _localDataService.addGroup(name: name, levelId: levelId);
+    return _firestoreService.addGroup(name: name, levelId: levelId);
   }
 
   Future<String> addStudent({
@@ -34,14 +30,17 @@ class StudentManagementRepository {
     required String email,
     required int attendancePercentage,
     required String groupId,
+    required String classId,
+    required List<String> subjectIds,
     String? levelId,
   }) {
-    // Placeholder write action (database removed)
-    return _localDataService.addStudent(
+    return _firestoreService.addStudent(
       fullName: fullName,
       email: email,
       attendancePercentage: attendancePercentage,
       groupId: groupId,
+      classId: classId,
+      subjectIds: subjectIds,
       levelId: levelId,
     );
   }

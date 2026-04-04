@@ -1,5 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:test/firebase_options.dart';
 import 'pages/login_page.dart';
 import 'package:test/pages/departement/ViewStudent.dart';
 import 'package:test/pages/departement/groups_screen.dart';
@@ -8,6 +10,7 @@ import 'package:test/pages/departement/students_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -22,8 +25,11 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         title: 'ScholarFlow Pro',
         theme: ThemeData(fontFamily: 'Inter'),
-        home: const LoginPage(),
-        routes: {ViewStudent.routeName: (_) => const ViewStudent()},
+        initialRoute: '/',
+        routes: {
+          '/': (_) => const LoginPage(),
+          ViewStudent.routeName: (_) => const ViewStudent(),
+        },
         onGenerateRoute: (settings) {
           if (settings.name == GroupsScreen.routeName) {
             return MaterialPageRoute(
@@ -45,4 +51,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

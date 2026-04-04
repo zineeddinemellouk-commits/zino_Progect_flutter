@@ -25,6 +25,8 @@ class StudentsScreen extends StatelessWidget {
     final formKey = GlobalKey<FormState>();
     final fullNameController = TextEditingController();
     final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
     final attendanceController = TextEditingController(text: '0');
     var isSaving = false;
 
@@ -77,6 +79,42 @@ class StudentsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
+                        controller: passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password is required';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm the password';
+                          }
+                          if (value != passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
                         controller: attendanceController,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
@@ -113,6 +151,16 @@ class StudentsScreen extends StatelessWidget {
                             return;
                           }
 
+                          if (passwordController.text !=
+                              confirmPasswordController.text) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Passwords do not match.'),
+                              ),
+                            );
+                            return;
+                          }
+
                           setDialogState(() => isSaving = true);
 
                           try {
@@ -121,6 +169,7 @@ class StudentsScreen extends StatelessWidget {
                                 .addStudent(
                                   fullName: fullNameController.text,
                                   email: emailController.text,
+                                  password: passwordController.text,
                                   attendancePercentage: int.parse(
                                     attendanceController.text.trim(),
                                   ),

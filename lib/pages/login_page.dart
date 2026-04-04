@@ -2,7 +2,13 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import "department_dashboard.dart" show DepartmentDashboard;
+import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:test/features/students/presentation/pages/students_page.dart';
+import 'package:test/models/app_user_profile.dart';
+import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
+import 'package:test/pages/role_home_page.dart';
+import 'package:test/services/department_auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,20 +17,9 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-
-  final Map<String, Map<String, String>> _localCredentials = const {
-    'Student': {
-      'student@test.com': '123456',
-    },
-    'Teacher': {
-      'teacher@test.com': '123456',
-    },
-    'Department': {
-      'admin@department.com': 'admin123',
-    },
-  };
 
   String selectedRole = "Student";
 
@@ -33,6 +28,144 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
+  bool _isSigningIn = false;
+
+  String _authErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'operation-not-allowed':
+        return 'Email/password sign-in is disabled in Firebase Console. '
+            'Enable Authentication > Sign-in method > Email/Password.';
+      case 'invalid-credential':
+      case 'invalid-email':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Invalid email or password.';
+      default:
+        return e.message ?? 'Login failed. Please try again.';
+    }
+  }
+
+  String _platformErrorMessage(PlatformException e) {
+    final code = e.code.toLowerCase();
+    final message = (e.message ?? '').toLowerCase();
+
+    if (code.contains('operation_not_allowed') ||
+        code.contains('operation-not-allowed') ||
+        message.contains('operation is not allowed')) {
+      return 'Email/password sign-in is disabled in Firebase Console. '
+          'Enable Authentication > Sign-in method > Email/Password.';
+    }
+
+    return e.message ?? 'Login failed due to a platform error.';
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final resetEmailController = TextEditingController(
+      text: emailController.text.trim(),
+    );
+    final resetFormKey = GlobalKey<FormState>();
+    var isSending = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Reset Password'),
+              content: Form(
+                key: resetFormKey,
+                child: TextFormField(
+                  controller: resetEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) {
+                      return 'Email is required';
+                    }
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(email)) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSending
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSending
+                      ? null
+                      : () async {
+                          if (resetFormKey.currentState?.validate() != true) {
+                            return;
+                          }
+
+                          setDialogState(() => isSending = true);
+                          try {
+                            await DepartmentAuthService()
+                                .sendPasswordResetEmail(
+                                  email: resetEmailController.text,
+                                );
+                            if (!context.mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Password reset email sent. Check your inbox.',
+                                ),
+                              ),
+                            );
+                          } on FirebaseAuthException catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(_authErrorMessage(e))),
+                            );
+                          } on PlatformException catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(_platformErrorMessage(e))),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to send reset email: $e'),
+                              ),
+                            );
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => isSending = false);
+                            }
+                          }
+                        },
+                  child: isSending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Send'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    resetEmailController.dispose();
+  }
 
   @override
   void initState() {
@@ -56,7 +189,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   void _changeRole(String role) {
     if (selectedRole == role) return;
-    
+
     double targetPosition;
     if (role == "Student") {
       targetPosition = 0;
@@ -65,18 +198,42 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     } else {
       targetPosition = 2;
     }
-    
-    _slideAnimation = Tween<double>(
-      begin: _slideAnimation.value,
-      end: targetPosition,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    
+
+    _slideAnimation =
+        Tween<double>(
+          begin: _slideAnimation.value,
+          end: targetPosition,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeInOut,
+          ),
+        );
+
     _animationController.forward(from: 0);
     setState(() {
       selectedRole = role;
     });
+  }
+
+  Widget _destinationForProfile(AppUserProfile profile) {
+    if (profile.role == 'Department') {
+      return const DepartmentDashboard();
+    }
+
+    if (profile.role == 'Student') {
+      return StudentsPage(
+        selfViewOnly: true,
+        studentDocumentId: profile.linkedDocumentId,
+        studentEmail: profile.email,
+      );
+    }
+
+    return RoleHomePage(
+      role: profile.role,
+      email: profile.email,
+      displayName: profile.displayName,
+    );
   }
 
   Future<void> handleLogin() async {
@@ -84,32 +241,123 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
     final email = emailController.text.trim();
     final password = passwordController.text;
-    final roleCredentials = _localCredentials[selectedRole] ?? const {};
-    final isValidLogin = roleCredentials[email] == password;
+    final authService = DepartmentAuthService();
 
-    if (isValidLogin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login as $selectedRole successful")),
+    setState(() => _isSigningIn = true);
+    try {
+      final profile = await authService.signInWithRole(
+        email: email,
+        password: password,
+        expectedRole: selectedRole,
       );
 
-      if (selectedRole == "Department") {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const DepartmentDashboard()),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$selectedRole dashboard coming soon!")),
-        );
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login as ${profile.role} successful')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => _destinationForProfile(profile),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (selectedRole == 'Department' && e.code == 'user-not-found') {
+        try {
+          await authService.createDepartmentAccount(
+            email: email,
+            password: password,
+          );
+
+          final profile = await authService.signInWithRole(
+            email: email,
+            password: password,
+            expectedRole: selectedRole,
+          );
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Department account created successfully.'),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => _destinationForProfile(profile),
+            ),
+          );
+          return;
+        } on FirebaseAuthException catch (createError) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_authErrorMessage(createError))),
+          );
+          return;
+        }
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid credentials")),
-      );
+
+      if (selectedRole == 'Department' && e.code == 'profile-not-found') {
+        try {
+          await authService.ensureDepartmentProfileForCredentials(
+            email: email,
+            password: password,
+          );
+
+          final profile = await authService.signInWithRole(
+            email: email,
+            password: password,
+            expectedRole: selectedRole,
+          );
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Department profile repaired successfully.'),
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => _destinationForProfile(profile),
+            ),
+          );
+          return;
+        } on FirebaseAuthException catch (repairError) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_authErrorMessage(repairError))),
+          );
+          return;
+        }
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_authErrorMessage(e))));
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_platformErrorMessage(e))));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningIn = false);
+      }
     }
   }
-  
-  
 
   @override
   Widget build(BuildContext context) {
@@ -132,10 +380,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: 420,
-                child: _loginCard(),
-              ),
+              child: SizedBox(width: 420, child: _loginCard()),
             ),
           ),
         ],
@@ -180,10 +425,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   alignment: Alignment.centerLeft,
                   child: Text(
                     "Welcome back",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 5),
@@ -207,16 +449,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       // Ensure minimum width to avoid negative constraints
-                      double availableWidth = constraints.maxWidth > 0 ? constraints.maxWidth - 8 : 400 - 8;
+                      double availableWidth = constraints.maxWidth > 0
+                          ? constraints.maxWidth - 8
+                          : 400 - 8;
                       double buttonWidth = availableWidth / 3;
-                      
+
                       return Stack(
                         children: [
                           AnimatedBuilder(
                             animation: _slideAnimation,
                             builder: (context, child) {
                               return Transform.translate(
-                                offset: Offset(_slideAnimation.value * buttonWidth, 0),
+                                offset: Offset(
+                                  _slideAnimation.value * buttonWidth,
+                                  0,
+                                ),
                                 child: Container(
                                   width: buttonWidth,
                                   height: 40,
@@ -283,6 +530,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   },
                 ),
 
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isSigningIn ? null : _showForgotPasswordDialog,
+                    child: const Text('Forgot Password?'),
+                  ),
+                ),
+
                 const SizedBox(height: 25),
 
                 /// ✅ BUTTON WORKING
@@ -290,17 +545,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                   onPressed: handleLogin,
+                    onPressed: _isSigningIn ? null : handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF004AC6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                    child: _isSigningIn
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "Login",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                   ),
                 ),
 
@@ -322,17 +586,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         onTap: () => _changeRole(role),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
           child: Center(
             child: Text(
               role,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: isActive
-                    ? const Color(0xFF004AC6)
-                    : Colors.black54,
+                color: isActive ? const Color(0xFF004AC6) : Colors.black54,
               ),
             ),
           ),

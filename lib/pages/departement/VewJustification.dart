@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:test/models/justification_model.dart';
+import 'package:test/pages/departement/providers/student_management_provider.dart';
 import '../department_dashboard.dart';
 import 'AddStudent.dart';
 import 'AddTeacher.dart';
@@ -13,67 +16,46 @@ class VewJustification extends StatefulWidget {
 }
 
 class _VewJustificationState extends State<VewJustification> {
-  // Sample data for justifications
-  final List<Map<String, dynamic>> justifications = [
-    {
-      "id": 1,
-      "studentName": "Alice Johnson",
-      "level": "L2",
-      "classGroup": "Group 3",
-      "email": "alice.johnson@university.edu",
-      "absenceDate": "2024-01-10",
-      "submissionDate": "2024-01-12",
-      "reason": "Medical appointment - Doctor visit for routine checkup",
-      "justificationFile": "medical_certificate.pdf",
-      "status": "pending", // pending, accepted, refused
-    },
-    {
-      "id": 2,
-      "studentName": "Bob Smith",
-      "level": "M1",
-      "classGroup": "Group 1",
-      "email": "bob.smith@university.edu",
-      "absenceDate": "2024-01-09",
-      "submissionDate": "2024-01-11",
-      "reason": "Family emergency - Hospital visit for family member",
-      "justificationFile": "family_emergency_letter.pdf",
-      "status": "pending",
-    },
-    {
-      "id": 3,
-      "studentName": "Charlie Brown",
-      "level": "L3",
-      "classGroup": "Group 2",
-      "email": "charlie.brown@university.edu",
-      "absenceDate": "2024-01-08",
-      "submissionDate": "2024-01-10",
-      "reason": "Sports competition - University basketball tournament",
-      "justificationFile": "competition_certificate.pdf",
-      "status": "pending",
-    },
-  ];
+  Future<void> _viewJustification(JustificationModel item) async {
+    final justification = {
+      'id': item.id,
+      'studentName': item.studentName ?? 'Unknown Student',
+      'level': item.levelName ?? '-',
+      'classGroup': item.groupName ?? '-',
+      'email': item.email ?? '-',
+      'absenceDate': item.createdAt.toIso8601String().split('T').first,
+      'submissionDate': item.createdAt.toIso8601String().split('T').first,
+      'reason': item.reason ?? 'No reason provided',
+      'justificationFile': item.fileType.isEmpty ? 'attachment' : item.fileType,
+      'status': item.status,
+    };
 
-  Future<void> _viewJustification(int index) async {
-    final justification = justifications[index];
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return JustificationDetailsDialog(
           justification: justification,
-          onAccept: () {
-            setState(() {
-              justifications[index]["status"] = "accepted";
-            });
+          onAccept: () async {
+            await this
+                .context
+                .read<StudentManagementProvider>()
+                .updateJustificationStatus(id: item.id, status: 'accepted');
+            if (!mounted) return;
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Justification accepted')),
             );
           },
-          onRefuse: (reason) {
-            setState(() {
-              justifications[index]["status"] = "refused";
-              justifications[index]["refusalReason"] = reason;
-            });
+          onRefuse: (reason) async {
+            await this
+                .context
+                .read<StudentManagementProvider>()
+                .updateJustificationStatus(
+                  id: item.id,
+                  status: 'refused',
+                  refusalReason: reason,
+                );
+            if (!mounted) return;
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Justification refused')),
@@ -247,20 +229,52 @@ class _VewJustificationState extends State<VewJustification> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  "${justifications.where((j) => j["status"] == "pending").length} pending requests",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                StreamBuilder<List<JustificationModel>>(
+                  stream: context
+                      .watch<StudentManagementProvider>()
+                      .watchJustifications(),
+                  builder: (context, snapshot) {
+                    final items = snapshot.data ?? const <JustificationModel>[];
+                    final pending = items.where((j) => j.status == 'pending').length;
+                    return Text(
+                      '$pending pending requests',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: justifications.length,
-                    itemBuilder: (context, index) {
-                      final justification = justifications[index];
-                      return Container(
+                  child: StreamBuilder<List<JustificationModel>>(
+                    stream: context
+                        .watch<StudentManagementProvider>()
+                        .watchJustifications(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      }
+                      final items = snapshot.data ?? const <JustificationModel>[];
+                      if (items.isEmpty) {
+                        return const Center(child: Text('No justifications found.'));
+                      }
+
+                      return ListView.builder(
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          final initials = (item.studentName ?? 'Student')
+                              .split(' ')
+                              .where((e) => e.isNotEmpty)
+                              .map((e) => e[0])
+                              .take(2)
+                              .join();
+                          final status = item.status;
+                          return Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -273,9 +287,9 @@ class _VewJustificationState extends State<VewJustification> {
                             ),
                           ],
                           border: Border.all(
-                            color: justification["status"] == "accepted"
+                            color: status == "accepted"
                                 ? Colors.green.withOpacity(0.3)
-                                : justification["status"] == "refused"
+                              : status == "refused"
                                     ? Colors.red.withOpacity(0.3)
                                     : Colors.orange.withOpacity(0.3),
                             width: 1,
@@ -286,7 +300,7 @@ class _VewJustificationState extends State<VewJustification> {
                           borderRadius: BorderRadius.circular(16),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(16),
-                            onTap: () => _viewJustification(index),
+                            onTap: () => _viewJustification(item),
                             child: Padding(
                               padding: const EdgeInsets.all(20),
                               child: Column(
@@ -305,7 +319,7 @@ class _VewJustificationState extends State<VewJustification> {
                                         ),
                                         child: Center(
                                           child: Text(
-                                            justification["studentName"].split(" ").map((e) => e[0]).join(""),
+                                            initials,
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontSize: 16,
@@ -320,7 +334,7 @@ class _VewJustificationState extends State<VewJustification> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              justification["studentName"],
+                                              item.studentName ?? 'Unknown Student',
                                               style: const TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.bold,
@@ -329,7 +343,7 @@ class _VewJustificationState extends State<VewJustification> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              "${justification["level"]} • ${justification["classGroup"]}",
+                                              "${item.levelName ?? '-'} • ${item.groupName ?? '-'}",
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: Colors.grey[600],
@@ -337,7 +351,7 @@ class _VewJustificationState extends State<VewJustification> {
                                             ),
                                             const SizedBox(height: 4),
                                             Text(
-                                              justification["email"],
+                                              item.email ?? '-',
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: Colors.grey[600],
@@ -352,21 +366,21 @@ class _VewJustificationState extends State<VewJustification> {
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                             decoration: BoxDecoration(
-                                              color: justification["status"] == "accepted"
+                                              color: status == "accepted"
                                                   ? Colors.green.withOpacity(0.1)
-                                                  : justification["status"] == "refused"
+                                                  : status == "refused"
                                                       ? Colors.red.withOpacity(0.1)
                                                       : Colors.orange.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(20),
                                             ),
                                             child: Text(
-                                              justification["status"].toUpperCase(),
+                                              status.toUpperCase(),
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.bold,
-                                                color: justification["status"] == "accepted"
+                                                color: status == "accepted"
                                                     ? Colors.green
-                                                    : justification["status"] == "refused"
+                                                    : status == "refused"
                                                         ? Colors.red
                                                         : Colors.orange,
                                               ),
@@ -398,7 +412,7 @@ class _VewJustificationState extends State<VewJustification> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          "Absence: ${justification["absenceDate"]} • Submitted: ${justification["submissionDate"]}",
+                                          "Absence: ${item.createdAt.toIso8601String().split('T').first} • Submitted: ${item.createdAt.toIso8601String().split('T').first}",
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: Colors.grey[700],
@@ -412,6 +426,8 @@ class _VewJustificationState extends State<VewJustification> {
                             ),
                           ),
                         ),
+                      );
+                        },
                       );
                     },
                   ),

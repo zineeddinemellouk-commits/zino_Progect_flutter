@@ -63,6 +63,8 @@ class LocalDataService {
         email: email.trim(),
         attendancePercentage: attendancePercentage,
         groupId: groupId,
+        classId: groupId,
+        subjectIds: const [],
         levelId: levelId,
       ),
     );

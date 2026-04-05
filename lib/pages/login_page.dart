@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/features/students/presentation/pages/students_page.dart';
+import 'package:test/features/teachers/presentation/pages/teacher_profile_page.dart';
 import 'package:test/models/app_user_profile.dart';
 import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
 import 'package:test/pages/role_home_page.dart';
@@ -226,6 +227,13 @@ class _LoginPageState extends State<LoginPage>
         selfViewOnly: true,
         studentDocumentId: profile.linkedDocumentId,
         studentEmail: profile.email,
+      );
+    }
+
+    if (profile.role == 'Teacher') {
+      return TeacherProfilePage(
+        teacherId: profile.linkedDocumentId,
+        teacherEmail: profile.email,
       );
     }
 

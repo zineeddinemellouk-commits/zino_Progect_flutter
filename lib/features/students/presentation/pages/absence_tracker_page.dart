@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:test/models/absence_model.dart';
-import 'package:test/services/firestore_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:test/features/students/data/students_firestore_service.dart';
+import 'package:test/features/students/models/absence_feature_model.dart';
 
 class AbsenceTrackerPage extends StatefulWidget {
   const AbsenceTrackerPage({super.key, this.studentId});
@@ -13,17 +15,43 @@ class AbsenceTrackerPage extends StatefulWidget {
 
 class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
   int _bottomIndex = 1;
-  late final FirestoreService _service;
+  late final StudentsFirestoreService _service;
 
   @override
   void initState() {
     super.initState();
-    _service = FirestoreService();
+    _service = StudentsFirestoreService();
   }
 
   @override
   Widget build(BuildContext context) {
-    final studentId = widget.studentId ?? 'current_student_id';
+    // FIX: Use Firebase Auth UID instead of hardcoded 'current_student_id'
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final studentId = widget.studentId ?? currentUser?.uid ?? '';
+    
+    if (studentId.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF2F4FA),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF2F4FA),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF4F46E5)),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: const Text(
+            'Absence Tracker',
+            style: TextStyle(
+              color: Color(0xFF4F46E5),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        body: const Center(
+          child: Text('Unable to load student data'),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F4FA),
@@ -48,7 +76,7 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<AbsenceModel>>(
+      body: StreamBuilder<List<AbsenceFeatureModel>>(
         stream: _service.watchAbsencesByStudent(studentId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -56,15 +84,16 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final absences = snapshot.data ?? [];
-          final justified = absences.where((a) => a.status == 'justified').length;
-          final pending =
-              absences.where((a) => a.status == 'pending').length;
+          final submitted = absences
+              .where((a) => a.status == AbsenceStatus.justified)
+              .length;
+          final pending = absences
+              .where((a) => a.status == AbsenceStatus.pending)
+              .length;
           final total = absences.length;
 
           return SafeArea(
@@ -75,7 +104,7 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                 children: [
                   _SummaryCard(
                     total: total,
-                    justified: justified,
+                    submitted: submitted,
                     pending: pending,
                   ),
                   const SizedBox(height: 26),
@@ -141,22 +170,33 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
     );
   }
 
-  List<Widget> _buildAbsenceCards(List<AbsenceModel> absences) {
+  List<Widget> _buildAbsenceCards(List<AbsenceFeatureModel> absences) {
     return absences.map((absence) {
       final status = _determineStatus(absence);
       return _AbsenceCard(
         absence: absence,
         status: status,
+        onTapCard: () => _onTapAbsence(absence),
         onJustify: () => _handleJustify(absence),
       );
     }).toList();
   }
 
-  _AbsenceStatus _determineStatus(AbsenceModel absence) {
-    if (absence.status == 'justified') {
-      return _AbsenceStatus.justified;
+  void _onTapAbsence(AbsenceFeatureModel absence) {
+    if (absence.status == AbsenceStatus.justified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification already submitted.')),
+      );
+      return;
     }
-    if (absence.status == 'expired' ||
+    _handleJustify(absence);
+  }
+
+  _AbsenceStatus _determineStatus(AbsenceFeatureModel absence) {
+    if (absence.status == AbsenceStatus.justified) {
+      return _AbsenceStatus.submitted;
+    }
+    if (absence.status == AbsenceStatus.rejected ||
         absence.remainingMilliseconds <= 0) {
       return _AbsenceStatus.expired;
     }
@@ -166,11 +206,20 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
     return _AbsenceStatus.pending;
   }
 
-  void _handleJustify(AbsenceModel absence) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Justification form coming next.'),
-      ),
+  Future<void> _handleJustify(AbsenceFeatureModel absence) async {
+    if (absence.remainingMilliseconds <= 0 ||
+        absence.status != AbsenceStatus.pending) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification time has expired.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _JustificationFormDialog(absence: absence, service: _service),
     );
   }
 }
@@ -178,12 +227,12 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.total,
-    required this.justified,
+    required this.submitted,
     required this.pending,
   });
 
   final int total;
-  final int justified;
+  final int submitted;
   final int pending;
 
   @override
@@ -243,7 +292,7 @@ class _SummaryCard extends StatelessWidget {
           const SizedBox(height: 18),
           Row(
             children: [
-              Expanded(child: _summarySmallCard('JUSTIFIED', justified)),
+              Expanded(child: _summarySmallCard('SUBMITTED', submitted)),
               const SizedBox(width: 12),
               Expanded(child: _summarySmallCard('PENDING', pending)),
             ],
@@ -291,11 +340,13 @@ class _AbsenceCard extends StatefulWidget {
   const _AbsenceCard({
     required this.absence,
     required this.status,
+    required this.onTapCard,
     required this.onJustify,
   });
 
-  final AbsenceModel absence;
+  final AbsenceFeatureModel absence;
   final _AbsenceStatus status;
+  final VoidCallback onTapCard;
   final VoidCallback onJustify;
 
   @override
@@ -324,6 +375,7 @@ class _AbsenceCardState extends State<_AbsenceCard> {
   @override
   Widget build(BuildContext context) {
     final isExpired = widget.status == _AbsenceStatus.expired;
+    final isSubmitted = widget.status == _AbsenceStatus.submitted;
     final tint = isExpired ? const Color(0xFFF4F6FB) : Colors.white;
 
     return Container(
@@ -332,160 +384,216 @@ class _AbsenceCardState extends State<_AbsenceCard> {
         color: tint,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border(
-            left: BorderSide(
-              color: _getAccentColor(widget.status),
-              width: 3.5,
+      child: InkWell(
+        onTap: widget.onTapCard,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border(
+              left: BorderSide(
+                color: _getAccentColor(widget.status),
+                width: 3.5,
+              ),
             ),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'COURSE CODE: ${widget.absence.courseCode}',
-                style: const TextStyle(
-                  color: Color(0xFF98A2B3),
-                  letterSpacing: 0.7,
-                  fontWeight: FontWeight.w700,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TEACHER: ${widget.absence.teacherName}',
+                  style: const TextStyle(
+                    color: Color(0xFF98A2B3),
+                    letterSpacing: 0.7,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.absence.courseName,
-                      style: const TextStyle(
-                        color: Color(0xFF1D2939),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _statusIcon(widget.status),
-                    color: isExpired
-                        ? const Color(0xFF98A2B3)
-                        : widget.status == _AbsenceStatus.pendingUrgent
-                        ? const Color(0xFFD92D20)
-                        : const Color(0xFF7B83FF),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: Color(0xFF667085),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _formatDate(widget.absence.absenceDate),
-                    style: const TextStyle(
-                      color: Color(0xFF667085),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: isExpired
-                      ? const Color(0xFFF9FAFB)
-                      : const Color(0xFFF0F4FF),
-                  borderRadius: BorderRadius.circular(10),
-                  border: isExpired
-                      ? Border.all(color: const Color(0xFFE4E7EC))
-                      : null,
-                ),
-                child: Row(
+                const SizedBox(height: 4),
+                Row(
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getTimeLabel(widget.status),
-                            style: const TextStyle(
-                              color: Color(0xFF98A2B3),
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            widget.absence.remainingTimeFormatted,
-                            style: TextStyle(
-                              color: isExpired
-                                  ? const Color(0xFF667085)
-                                  : widget.status == _AbsenceStatus.pendingUrgent
-                                  ? const Color(0xFFD92D20)
-                                  : const Color(0xFF4F46E5),
-                              fontSize: 22,
-                              height: 1,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        widget.absence.subjectName,
+                        style: const TextStyle(
+                          color: Color(0xFF1D2939),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     Icon(
-                      isExpired
-                          ? Icons.block_outlined
-                          : widget.status == _AbsenceStatus.pendingUrgent
-                          ? Icons.timer_outlined
-                          : Icons.schedule,
+                      _statusIcon(widget.status),
                       color: isExpired
                           ? const Color(0xFF98A2B3)
                           : widget.status == _AbsenceStatus.pendingUrgent
                           ? const Color(0xFFD92D20)
-                          : const Color(0xFF5E64FF),
+                          : const Color(0xFF7B83FF),
                     ),
                   ],
                 ),
-              ),
-              if (!isExpired && widget.status != _AbsenceStatus.justified) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: widget.onJustify,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.status == _AbsenceStatus.pendingUrgent
-                          ? const Color(0xFF4636D9)
-                          : const Color(0xFFC9D9F4),
-                      foregroundColor: widget.status == _AbsenceStatus.pendingUrgent
-                          ? Colors.white
-                          : const Color(0xFF667085),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
+                const SizedBox(height: 2),
+                Text(
+                  widget.absence.remainingTimeFormatted,
+                  style: TextStyle(
+                    color: isExpired
+                        ? const Color(0xFF667085)
+                        : isSubmitted
+                        ? const Color(0xFF12B76A)
+                        : widget.status == _AbsenceStatus.pendingUrgent
+                        ? const Color(0xFFD92D20)
+                        : const Color(0xFF4F46E5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 18,
+                      color: Color(0xFF667085),
                     ),
-                    child: const Text(
-                      'Justify Now',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDateTime(widget.absence.createdAt),
+                      style: const TextStyle(
+                        color: Color(0xFF667085),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor(
+                        widget.status,
+                      ).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _statusText(widget.status),
+                      style: TextStyle(
+                        color: _statusColor(widget.status),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isExpired
+                        ? const Color(0xFFF9FAFB)
+                        : const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: isExpired
+                        ? Border.all(color: const Color(0xFFE4E7EC))
+                        : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getTimeLabel(widget.status),
+                              style: const TextStyle(
+                                color: Color(0xFF98A2B3),
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              widget.absence.remainingTimeFormatted,
+                              style: TextStyle(
+                                color: isExpired
+                                    ? const Color(0xFF667085)
+                                    : widget.status ==
+                                          _AbsenceStatus.pendingUrgent
+                                    ? const Color(0xFFD92D20)
+                                    : const Color(0xFF4F46E5),
+                                fontSize: 22,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        isExpired
+                            ? Icons.block_outlined
+                            : widget.status == _AbsenceStatus.pendingUrgent
+                            ? Icons.timer_outlined
+                            : Icons.schedule,
+                        color: isExpired
+                            ? const Color(0xFF98A2B3)
+                            : widget.status == _AbsenceStatus.pendingUrgent
+                            ? const Color(0xFFD92D20)
+                            : const Color(0xFF5E64FF),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isExpired) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Cannot justify anymore',
+                    style: TextStyle(
+                      color: Color(0xFF667085),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                if (!isExpired && widget.status == _AbsenceStatus.pending) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.onJustify,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            widget.status == _AbsenceStatus.pendingUrgent
+                            ? const Color(0xFF4636D9)
+                            : const Color(0xFFC9D9F4),
+                        foregroundColor:
+                            widget.status == _AbsenceStatus.pendingUrgent
+                            ? Colors.white
+                            : const Color(0xFF667085),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Justify Now',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -498,7 +606,7 @@ class _AbsenceCardState extends State<_AbsenceCard> {
         return const Color(0xFFD92D20);
       case _AbsenceStatus.pending:
         return const Color(0xFF7B83FF);
-      case _AbsenceStatus.justified:
+      case _AbsenceStatus.submitted:
       case _AbsenceStatus.expired:
         return const Color(0xFF98A2B3);
     }
@@ -510,7 +618,7 @@ class _AbsenceCardState extends State<_AbsenceCard> {
         return Icons.warning_amber_rounded;
       case _AbsenceStatus.pending:
         return Icons.assignment_late_outlined;
-      case _AbsenceStatus.justified:
+      case _AbsenceStatus.submitted:
         return Icons.check_circle_outlined;
       case _AbsenceStatus.expired:
         return Icons.event_busy_outlined;
@@ -523,25 +631,212 @@ class _AbsenceCardState extends State<_AbsenceCard> {
         return 'DEADLINE COUNTDOWN';
       case _AbsenceStatus.pending:
         return 'TIME TO JUSTIFY';
-      case _AbsenceStatus.justified:
+      case _AbsenceStatus.submitted:
         return 'STATUS';
       case _AbsenceStatus.expired:
         return 'STATUS';
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _statusText(_AbsenceStatus status) {
+    switch (status) {
+      case _AbsenceStatus.pendingUrgent:
+      case _AbsenceStatus.pending:
+        return 'PENDING';
+      case _AbsenceStatus.submitted:
+        return 'SUBMITTED';
+      case _AbsenceStatus.expired:
+        return 'EXPIRED';
+    }
+  }
+
+  Color _statusColor(_AbsenceStatus status) {
+    switch (status) {
+      case _AbsenceStatus.pendingUrgent:
+        return const Color(0xFFD92D20);
+      case _AbsenceStatus.pending:
+        return const Color(0xFF4F46E5);
+      case _AbsenceStatus.submitted:
+        return const Color(0xFF12B76A);
+      case _AbsenceStatus.expired:
+        return const Color(0xFF667085);
+    }
+  }
+
+  String _formatDateTime(DateTime date) {
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
+    final minute = date.minute.toString().padLeft(2, '0');
+    final suffix = date.hour >= 12 ? 'PM' : 'AM';
+    return '${months[date.month - 1]} ${date.day}, ${date.year} • $hour:$minute $suffix';
   }
 
   @override
   void dispose() {
     _refreshTimer.ignore();
     super.dispose();
+  }
+}
+
+class _JustificationFormDialog extends StatefulWidget {
+  const _JustificationFormDialog({
+    required this.absence,
+    required this.service,
+  });
+
+  final AbsenceFeatureModel absence;
+  final StudentsFirestoreService service;
+
+  @override
+  State<_JustificationFormDialog> createState() =>
+      _JustificationFormDialogState();
+}
+
+class _JustificationFormDialogState extends State<_JustificationFormDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _reasonController = TextEditingController();
+  PlatformFile? _pickedFile;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'],
+    );
+
+    if (!mounted || result == null || result.files.isEmpty) return;
+    setState(() => _pickedFile = result.files.single);
+  }
+
+  Future<void> _submit() async {
+    if (_formKey.currentState?.validate() != true) return;
+    final file = _pickedFile;
+    if (file == null || file.bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload an image or PDF file.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.service.submitAbsenceJustification(
+        absenceId: widget.absence.id,
+        studentId: widget.absence.studentId,
+        reason: _reasonController.text,
+        fileBytes: file.bytes!,
+        fileName: file.name,
+        fileType: (file.extension ?? '').toLowerCase(),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Justification sent to admin.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit justification: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Submit Justification'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _reasonController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Reason',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if ((value ?? '').trim().isEmpty) {
+                    return 'Reason is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isSubmitting ? null : _pickFile,
+                  icon: const Icon(Icons.upload_file),
+                  label: Text(
+                    _pickedFile == null
+                        ? 'Upload Image or PDF'
+                        : _pickedFile!.name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Allowed: JPG, PNG, PDF',
+                  style: TextStyle(color: Color(0xFF667085), fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Send'),
+        ),
+      ],
+    );
   }
 }
 
@@ -613,4 +908,4 @@ class _AbsenceBottomBar extends StatelessWidget {
   }
 }
 
-enum _AbsenceStatus { pendingUrgent, pending, justified, expired }
+enum _AbsenceStatus { pendingUrgent, pending, submitted, expired }

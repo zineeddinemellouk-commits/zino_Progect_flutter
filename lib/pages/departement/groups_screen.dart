@@ -23,7 +23,7 @@ class GroupsScreen extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (_, setDialogState) {
             return AlertDialog(
               title: Text('Add group in ${level.name}'),
               content: Form(
@@ -70,21 +70,30 @@ class GroupsScreen extends StatelessWidget {
 
                             if (context.mounted) {
                               Navigator.of(dialogContext).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Group added successfully.'),
-                                ),
-                              );
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Group added successfully.'),
+                                    ),
+                                  );
+                                }
+                              });
                             }
                           } catch (_) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Failed to add group. Please check network and try again.',
-                                  ),
-                                ),
-                              );
+                              Navigator.of(dialogContext).pop();
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Failed to add group. Please check network and try again.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              });
                             }
                           } finally {
                             if (dialogContext.mounted) {

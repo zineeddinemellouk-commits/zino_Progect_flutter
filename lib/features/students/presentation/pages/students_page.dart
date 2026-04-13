@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/students/data/students_firestore_service.dart';
-import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/students/presentation/pages/absence_tracker_page.dart';
+import 'package:test/pages/login_page.dart';
+import 'package:test/services/department_auth_service.dart';
 
 extension AttendanceGrading on double {
   String get gradeLabel {
@@ -38,7 +39,17 @@ class StudentsPage extends StatefulWidget {
 
 class _StudentsPageState extends State<StudentsPage> {
   final StudentsFirestoreService _service = StudentsFirestoreService();
+  final DepartmentAuthService _authService = DepartmentAuthService();
   int _selectedNavIndex = 0;
+
+  Future<void> _logout() async {
+    await _authService.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
 
   Future<void> _showStudentFormDialog({StudentFeatureModel? existing}) async {
     final formKey = GlobalKey<FormState>();
@@ -63,7 +74,7 @@ class _StudentsPageState extends State<StudentsPage> {
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (_, setDialogState) {
             return AlertDialog(
               title: Text(existing == null ? 'Add Student' : 'Edit Student'),
               content: SizedBox(
@@ -244,21 +255,30 @@ class _StudentsPageState extends State<StudentsPage> {
 
                             if (context.mounted) {
                               Navigator.of(dialogContext).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    existing == null
-                                        ? 'Student added successfully.'
-                                        : 'Student updated successfully.',
-                                  ),
-                                ),
-                              );
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        existing == null
+                                            ? 'Student added successfully.'
+                                            : 'Student updated successfully.',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              });
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Save failed: $e')),
-                              );
+                              Navigator.of(dialogContext).pop();
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Save failed: $e')),
+                                  );
+                                }
+                              });
                             }
                           } finally {
                             if (dialogContext.mounted) {
@@ -280,12 +300,6 @@ class _StudentsPageState extends State<StudentsPage> {
         );
       },
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final h = date.hour.toString().padLeft(2, '0');
-    final m = date.minute.toString().padLeft(2, '0');
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} • $h:$m';
   }
 
   @override
@@ -334,6 +348,11 @@ class _StudentsPageState extends State<StudentsPage> {
               color: Color(0xFF2D3A8C),
             ),
           ),
+          IconButton(
+            onPressed: _logout,
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFF2D3A8C)),
+          ),
         ],
       ),
       body: StreamBuilder<List<StudentFeatureModel>>(
@@ -359,6 +378,14 @@ class _StudentsPageState extends State<StudentsPage> {
           final firstStudent = students.isNotEmpty ? students.first : null;
 
           final avgAttendance = (firstStudent?.attendanceRate ?? 0) * 100;
+          final avgAttendanceText = avgAttendance.toStringAsFixed(1);
+          final avgAttendanceGrade =
+              (firstStudent?.attendanceRate ?? 0).gradeLabel;
+          final avgAttendanceComment = switch (avgAttendanceGrade) {
+            'Excellent' => 'Great job — keep the momentum going.',
+            'Average' => 'Solid progress — there is still room to improve.',
+            _ => 'Let’s work on raising the attendance average.',
+          };
           final presentCount = firstStudent?.totalPresence ?? 0;
           final absentCount = firstStudent?.totalAbsence ?? 0;
           final activeTerm = DateTime.now().year;
@@ -402,7 +429,7 @@ class _StudentsPageState extends State<StudentsPage> {
                         text: 'Average attendance is currently at ',
                       ),
                       TextSpan(
-                        text: '$avgAttendance%. ',
+                        text: '$avgAttendanceText%. ',
                         style: const TextStyle(
                           color: Color(0xFF5145E5),
                           fontWeight: FontWeight.w800,
@@ -558,7 +585,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                         ),
                                   ),
                                   Text(
-                                    '$avgAttendance%',
+                                    '$avgAttendanceText%',
                                     style: const TextStyle(
                                       color: Color(0xFF4A40CF),
                                       fontWeight: FontWeight.w700,
@@ -569,13 +596,13 @@ class _StudentsPageState extends State<StudentsPage> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Excellent',
-                                    style: TextStyle(
+                                    avgAttendanceGrade,
+                                    style: const TextStyle(
                                       color: Color(0xFF1D2939),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -583,8 +610,8 @@ class _StudentsPageState extends State<StudentsPage> {
                                   ),
                                   SizedBox(height: 2),
                                   Text(
-                                    'Dean\'s List Eligible',
-                                    style: TextStyle(
+                                    avgAttendanceComment,
+                                    style: const TextStyle(
                                       color: Color(0xFF98A2B3),
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -663,158 +690,6 @@ class _StudentsPageState extends State<StudentsPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8ECF8),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Column(
-                            children: [
-                              const Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Recent Absences',
-                                      style: TextStyle(
-                                        color: Color(0xFF1D2939),
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              if (firstStudent == null || firstStudent.id.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  child: Text(
-                                    'No student data. Select or log in to view absences.',
-                                    style: TextStyle(color: Color(0xFF667085)),
-                                  ),
-                                )
-                              else
-                                StreamBuilder<List<AbsenceFeatureModel>>(
-                                  stream: _service.watchAbsencesByStudent(firstStudent.id),
-                                  builder: (context, absenceSnapshot) {
-                                    if (absenceSnapshot.connectionState == ConnectionState.waiting) {
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 20),
-                                        child: CircularProgressIndicator(),
-                                      );
-                                    }
-
-                                    final absences = absenceSnapshot.data ?? const [];
-                                    final visibleAbsences = absences.take(3).toList();
-
-                                    if (absences.isEmpty) {
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 20),
-                                        child: Text(
-                                          'No absences recorded.',
-                                          style: TextStyle(color: Color(0xFF667085)),
-                                        ),
-                                      );
-                                    }
-
-                                    return Column(
-                                      children: visibleAbsences.map((absence) {
-                                        final isPending = absence.status == AbsenceStatus.pending;
-                                        final statusColor = isPending
-                                            ? const Color(0xFFDC2626)
-                                            : absence.status == AbsenceStatus.justified
-                                                ? const Color(0xFF12B76A)
-                                                : const Color(0xFF98A2B3);
-
-                                        final statusLabel = absence.status == AbsenceStatus.pending
-                                            ? 'PENDING'
-                                            : absence.status == AbsenceStatus.justified
-                                                ? 'JUSTIFIED'
-                                                : 'REJECTED';
-
-                                        return Container(
-                                          margin: const EdgeInsets.only(bottom: 12),
-                                          padding: const EdgeInsets.all(14),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(14),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 4,
-                                                height: 42,
-                                                decoration: BoxDecoration(
-                                                  color: statusColor,
-                                                  borderRadius: BorderRadius.circular(2),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      absence.courseName,
-                                                      style: const TextStyle(
-                                                        color: Color(0xFF1D2939),
-                                                        fontSize: 15,
-                                                        fontWeight: FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      '${_formatDate(absence.createdAt)} · ${absence.courseCode}',
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                        color: Color(0xFF667085),
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 5,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: statusColor.withValues(alpha: 0.15),
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  statusLabel,
-                                                  style: TextStyle(
-                                                    color: statusColor,
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (widget.selfViewOnly)
-                                                const Padding(
-                                                  padding: EdgeInsets.only(left: 6),
-                                                  child: Icon(
-                                                    Icons.chevron_right_rounded,
-                                                    color: Color(0xFF98A2B3),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    );
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
                 const SizedBox(height: 18),
                 Container(
                   width: double.infinity,

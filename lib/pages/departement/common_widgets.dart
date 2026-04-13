@@ -5,6 +5,26 @@ import 'AddTeacher.dart';
 import 'AddSubject.dart';
 import 'VewJustification.dart';
 import 'ViewStudent.dart';
+import 'ViewTeachers.dart';
+import 'ViewSubjects.dart';
+import 'package:test/pages/login_page.dart';
+import 'package:test/services/department_auth_service.dart';
+
+Future<void> _logoutFromDepartment(BuildContext context) async {
+  try {
+    await DepartmentAuthService().signOut();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (_) => false,
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Logout failed: $e')),
+    );
+  }
+}
 
 PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
   return PreferredSize(
@@ -50,6 +70,20 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
                 icon: const Icon(Icons.notifications, color: Colors.white),
                 onPressed: () {},
                 tooltip: 'Notifications',
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: () => _logoutFromDepartment(context),
+                tooltip: 'Logout',
               ),
             ),
           ],
@@ -138,12 +172,31 @@ Drawer departmentDrawer(BuildContext context) {
             Navigator.pop(context);
             Navigator.pushNamed(context, ViewStudent.routeName);
           }),
+          _drawerItem(context, Icons.badge, "View Teachers", () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ViewTeachers()),
+            );
+          }),
+          _drawerItem(context, Icons.book, "View Subjects", () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ViewSubjects()),
+            );
+          }),
           _drawerItem(context, Icons.visibility, "View Justification", () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const VewJustification()),
             );
+          }),
+          const Divider(height: 20),
+          _drawerItem(context, Icons.logout, "Logout", () {
+            Navigator.pop(context);
+            _logoutFromDepartment(context);
           }),
         ],
       ),

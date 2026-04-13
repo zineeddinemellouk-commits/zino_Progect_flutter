@@ -41,6 +41,12 @@ class _LoginPageState extends State<LoginPage>
       case 'wrong-password':
       case 'user-not-found':
         return 'Invalid email or password.';
+      case 'too-many-requests':
+        return 'Too many failed attempts. Please wait a moment and try again.';
+      case 'network-request-failed':
+        return 'Network error. Please check your connection and try again.';
+      case 'user-disabled':
+        return 'This account has been disabled. Contact your administrator.';
       default:
         return e.message ?? 'Login failed. Please try again.';
     }
@@ -245,10 +251,11 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState?.validate() != true) return;
 
     final email = emailController.text.trim();
     final password = passwordController.text;
+    final selectedRoleSnapshot = selectedRole;
     final authService = DepartmentAuthService();
 
     setState(() => _isSigningIn = true);
@@ -256,7 +263,7 @@ class _LoginPageState extends State<LoginPage>
       final profile = await authService.signInWithRole(
         email: email,
         password: password,
-        expectedRole: selectedRole,
+        expectedRole: selectedRoleSnapshot,
       );
 
       if (!mounted) return;
@@ -272,7 +279,7 @@ class _LoginPageState extends State<LoginPage>
         ),
       );
     } on FirebaseAuthException catch (e) {
-      if (selectedRole == 'Department' && e.code == 'user-not-found') {
+      if (selectedRoleSnapshot == 'Department' && e.code == 'user-not-found') {
         try {
           await authService.createDepartmentAccount(
             email: email,
@@ -282,7 +289,7 @@ class _LoginPageState extends State<LoginPage>
           final profile = await authService.signInWithRole(
             email: email,
             password: password,
-            expectedRole: selectedRole,
+            expectedRole: selectedRoleSnapshot,
           );
 
           if (!mounted) return;
@@ -309,7 +316,8 @@ class _LoginPageState extends State<LoginPage>
         }
       }
 
-      if (selectedRole == 'Department' && e.code == 'profile-not-found') {
+      if (selectedRoleSnapshot == 'Department' &&
+          e.code == 'profile-not-found') {
         try {
           await authService.ensureDepartmentProfileForCredentials(
             email: email,
@@ -319,7 +327,7 @@ class _LoginPageState extends State<LoginPage>
           final profile = await authService.signInWithRole(
             email: email,
             password: password,
-            expectedRole: selectedRole,
+            expectedRole: selectedRoleSnapshot,
           );
 
           if (!mounted) return;
@@ -350,6 +358,12 @@ class _LoginPageState extends State<LoginPage>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_authErrorMessage(e))));
+    } on FirebaseException catch (e) {
+      if (!mounted) return;
+      final message = e.message ?? 'A Firebase error occurred. Please try again.';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } on PlatformException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -359,7 +373,11 @@ class _LoginPageState extends State<LoginPage>
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      ).showSnackBar(
+        const SnackBar(
+          content: Text('Login failed. Please verify your credentials.'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSigningIn = false);

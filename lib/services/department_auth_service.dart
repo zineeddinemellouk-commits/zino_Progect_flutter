@@ -111,6 +111,7 @@ class DepartmentAuthService {
       );
 
 
+     // fix her 
 
       await signOutManagedAccount();
 

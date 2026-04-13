@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_attendance_groups_page.dart';
+import 'package:test/services/department_auth_service.dart';
+import 'package:test/pages/login_page.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key, this.teacherId, this.teacherEmail});
@@ -16,8 +18,18 @@ class TeacherProfilePage extends StatefulWidget {
 
 class _TeacherProfilePageState extends State<TeacherProfilePage> {
   final TeachersFirestoreService _service = TeachersFirestoreService();
+  final DepartmentAuthService _authService = DepartmentAuthService();
   int _selectedNavIndex = 0;
   String _searchQuery = '';
+
+  Future<void> _logout() async {
+    await _authService.signOut();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +87,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                       const SnackBar(content: Text('No new notifications.')),
                     );
                   },
+                  onLogoutTap: _logout,
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -145,7 +158,8 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                         const SizedBox(height: 14),
                         _SmallStatsRow(
                           subjects: dashboard.subjects.length,
-                          classes: dashboard.classes.length,
+                          levels: dashboard.levels.length,
+                          groups: dashboard.groups.length,
                           activeStudents: dashboard.activeStudents,
                         ),
                         const SizedBox(height: 16),
@@ -342,10 +356,15 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
 }
 
 class _TopHeader extends StatelessWidget {
-  const _TopHeader({required this.title, required this.onNotificationTap});
+  const _TopHeader({
+    required this.title,
+    required this.onNotificationTap,
+    required this.onLogoutTap,
+  });
 
   final String title;
   final VoidCallback onNotificationTap;
+  final VoidCallback onLogoutTap;
 
   @override
   Widget build(BuildContext context) {
@@ -382,6 +401,11 @@ class _TopHeader extends StatelessWidget {
               Icons.notifications_none_rounded,
               color: Color(0xFF475467),
             ),
+          ),
+          IconButton(
+            onPressed: onLogoutTap,
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFF475467)),
           ),
         ],
       ),
@@ -630,12 +654,14 @@ class _MetricCard extends StatelessWidget {
 class _SmallStatsRow extends StatelessWidget {
   const _SmallStatsRow({
     required this.subjects,
-    required this.classes,
+    required this.levels,
+    required this.groups,
     required this.activeStudents,
   });
 
   final int subjects;
-  final int classes;
+  final int levels;
+  final int groups;
   final int activeStudents;
 
   @override
@@ -678,9 +704,9 @@ class _SmallStatsRow extends StatelessWidget {
       children: [
         tile('Subjects', '$subjects'),
         const SizedBox(width: 8),
-        tile('Classes', '$classes'),
+        tile('Levels', '$levels'),
         const SizedBox(width: 8),
-        tile('Active', '$activeStudents'),
+        tile('Groups', '$groups'),
       ],
     );
   }

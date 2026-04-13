@@ -3,8 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class JustificationModel {
   const JustificationModel({
     required this.id,
+    required this.absenceId,
     required this.studentId,
+    required this.teacherId,
+    required this.teacherName,
     required this.subjectId,
+    required this.subject,
+    required this.absenceDate,
     required this.fileUrl,
     required this.fileType,
     required this.createdAt,
@@ -18,8 +23,13 @@ class JustificationModel {
   });
 
   final String id;
+  final String absenceId;
   final String studentId;
+  final String teacherId;
+  final String teacherName;
   final String subjectId;
+  final String subject;
+  final DateTime absenceDate;
   final String fileUrl;
   final String fileType;
   final DateTime createdAt;
@@ -46,8 +56,18 @@ class JustificationModel {
 
     return JustificationModel(
       id: id,
+      absenceId: (map['absenceId'] as String?)?.trim() ?? '',
       studentId: (map['studentId'] as String?)?.trim() ?? '',
+      teacherId: (map['teacherId'] as String?)?.trim() ?? '',
+      teacherName: (map['teacherName'] as String?)?.trim() ?? 'Unknown Teacher',
       subjectId: (map['subjectId'] as String?)?.trim() ?? '',
+      subject: (map['subject'] as String?)?.trim() ?? (map['subjectName'] as String?)?.trim() ?? 'Unknown Subject',
+      absenceDate: (() {
+        final raw = map['absenceDate'];
+        if (raw is Timestamp) return raw.toDate();
+        if (raw is DateTime) return raw;
+        return createdAt;
+      })(),
       fileUrl: (map['fileUrl'] as String?)?.trim() ?? '',
       fileType: (map['fileType'] as String?)?.trim() ?? '',
       createdAt: createdAt,
@@ -63,8 +83,13 @@ class JustificationModel {
 
   Map<String, dynamic> toMap() {
     return {
+      'absenceId': absenceId,
       'studentId': studentId,
+      'teacherId': teacherId,
+      'teacherName': teacherName,
       'subjectId': subjectId,
+      'subject': subject,
+      'absenceDate': Timestamp.fromDate(absenceDate),
       'fileUrl': fileUrl,
       'fileType': fileType,
       'createdAt': Timestamp.fromDate(createdAt),

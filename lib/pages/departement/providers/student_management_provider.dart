@@ -202,6 +202,8 @@ class StudentManagementProvider extends ChangeNotifier {
     required String email,
     required String password,
     required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
   }) async {
     fullName = fullName.trim();
     email = email.trim();
@@ -224,6 +226,8 @@ class StudentManagementProvider extends ChangeNotifier {
         fullName: fullName,
         email: email,
         subjectIds: subjectIds,
+        levelIds: levelIds,
+        groupIds: groupIds,
         authUid: authUid,
       );
 
@@ -279,5 +283,81 @@ class StudentManagementProvider extends ChangeNotifier {
       refusalReason: refusalReason,
     );
     notifyListeners();
+  }
+
+  Future<void> updateStudent({
+    required String id,
+    required String fullName,
+    required String email,
+    required int attendancePercentage,
+    required String groupId,
+    required String classId,
+    required List<String> subjectIds,
+    String? levelId,
+  }) async {
+    await _firestoreService.updateStudent(
+      id: id,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      attendancePercentage: attendancePercentage,
+      groupId: groupId,
+      classId: classId,
+      subjectIds: subjectIds,
+      levelId: levelId,
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteStudent(String id) async {
+    await _firestoreService.deleteStudent(id);
+    notifyListeners();
+  }
+
+  Future<void> updateTeacher({
+    required String id,
+    required String fullName,
+    required String email,
+    required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
+  }) async {
+    await _firestoreService.updateTeacher(
+      id: id,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      subjectIds: subjectIds,
+      levelIds: levelIds,
+      groupIds: groupIds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteTeacher(String id) async {
+    await _firestoreService.deleteTeacher(id);
+    notifyListeners();
+  }
+
+  Future<void> updateSubject({
+    required String id,
+    required String name,
+    required String teacherId,
+    required List<String> classIds,
+  }) async {
+    await _firestoreService.updateSubject(
+      id: id,
+      name: name.trim(),
+      teacherId: teacherId.trim(),
+      classIds: classIds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteSubject(String id) async {
+    await _firestoreService.deleteSubject(id);
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    await _authService.signOut();
   }
 }

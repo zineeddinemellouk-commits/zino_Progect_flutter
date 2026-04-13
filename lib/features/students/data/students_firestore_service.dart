@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
+import 'package:test/features/students/models/notification_feature_model.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 
 class StudentsFirestoreService {
@@ -22,6 +26,12 @@ class StudentsFirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _classes =>
       _firestore.collection('classes');
+
+  CollectionReference<Map<String, dynamic>> get _justifications =>
+      _firestore.collection('justifications');
+
+  CollectionReference<Map<String, dynamic>> get _notifications =>
+      _firestore.collection('notifications');
 
   Stream<List<StudentFeatureModel>> watchStudents() {
     return _students.orderBy('createdAt', descending: true).snapshots().map((
@@ -95,11 +105,51 @@ class StudentsFirestoreService {
                 .map((doc) => AbsenceFeatureModel.fromMap(doc.id, doc.data()))
                 .toList();
             refreshedItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            await _syncStudentAbsenceCounters(
+              normalizedStudentId,
+              refreshedItems,
+            );
             return refreshedItems;
           }
 
+          await _syncStudentAbsenceCounters(normalizedStudentId, items);
           return items;
         });
+  }
+
+  Future<void> _syncStudentAbsenceCounters(
+    String studentId,
+    List<AbsenceFeatureModel> absences,
+  ) async {
+    final studentRef = _students.doc(studentId);
+    final studentSnap = await studentRef.get();
+    if (!studentSnap.exists) return;
+
+    final data = studentSnap.data() ?? const <String, dynamic>{};
+    final totalAbsence = absences.length;
+    final justifiedAbsence = absences
+        .where((a) => a.status == AbsenceStatus.justified)
+        .length;
+    final pendingAbsence = absences
+        .where((a) => a.status == AbsenceStatus.pending)
+        .length;
+
+    final currentTotal = (data['totalAbsence'] as num?)?.toInt() ?? 0;
+    final currentJustified = (data['justifiedAbsence'] as num?)?.toInt() ?? 0;
+    final currentPending = (data['pendingAbsence'] as num?)?.toInt() ?? 0;
+
+    if (currentTotal == totalAbsence &&
+        currentJustified == justifiedAbsence &&
+        currentPending == pendingAbsence) {
+      return;
+    }
+
+    await studentRef.update({
+      'totalAbsence': totalAbsence,
+      'justifiedAbsence': justifiedAbsence,
+      'pendingAbsence': pendingAbsence,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Stream<List<Map<String, String>>> watchLevels() {
@@ -235,55 +285,189 @@ class StudentsFirestoreService {
     });
   }
 
-  Future<void> submitAbsenceJustification({
+  Future<String> submitAbsenceJustification({
     required String absenceId,
     required String studentId,
+    required String reason,
+    required Uint8List fileBytes,
+    required String fileName,
+    required String fileType,
   }) async {
     final absenceRef = _absences.doc(absenceId);
     final studentRef = _students.doc(studentId);
+    final justificationRef = _justifications.doc();
 
-    await _firestore.runTransaction((tx) async {
-      final absenceSnap = await tx.get(absenceRef);
-      final studentSnap = await tx.get(studentRef);
+    final absenceSnap = await absenceRef.get();
+    final studentSnap = await studentRef.get();
 
-      if (!absenceSnap.exists || !studentSnap.exists) {
-        throw Exception('Record not found');
-      }
+    if (!absenceSnap.exists || !studentSnap.exists) {
+      throw Exception('Record not found');
+    }
 
-      final absenceData = absenceSnap.data() ?? const <String, dynamic>{};
-      final studentData = studentSnap.data() ?? const <String, dynamic>{};
+    final absenceData = absenceSnap.data() ?? const <String, dynamic>{};
+    final studentData = studentSnap.data() ?? const <String, dynamic>{};
 
-      final status =
-          (absenceData['status'] as String?)?.toLowerCase() ?? 'pending';
-      final deadlineRaw = absenceData['deadlineAt'];
-      final deadlineAt = deadlineRaw is Timestamp
-          ? deadlineRaw.toDate()
-          : DateTime.now();
+    final status =
+        (absenceData['status'] as String?)?.toLowerCase() ?? 'pending';
+    final deadlineRaw = absenceData['deadlineAt'];
+    final deadlineAt = deadlineRaw is Timestamp
+        ? deadlineRaw.toDate()
+        : DateTime.now();
+    final existingJustificationId =
+        (absenceData['justificationId'] as String?)?.trim() ?? '';
 
-      if (status != 'pending') {
-        throw Exception('Absence is no longer pending.');
-      }
+    if (status != 'pending') {
+      throw Exception('This absence has already been processed.');
+    }
 
-      if (DateTime.now().isAfter(deadlineAt)) {
-        throw Exception(
-          'Deadline expired. Justification is no longer allowed.',
-        );
-      }
+    if (existingJustificationId.isNotEmpty) {
+      throw Exception('Justification already submitted for this absence.');
+    }
 
-      final pending = (studentData['pendingAbsence'] as num?)?.toInt() ?? 0;
-      final justified = (studentData['justifiedAbsence'] as num?)?.toInt() ?? 0;
+    if (DateTime.now().isAfter(deadlineAt)) {
+      throw Exception('Deadline expired. Justification is no longer allowed.');
+    }
 
-      tx.update(absenceRef, {
-        'status': 'justified',
-        'justifiedAt': FieldValue.serverTimestamp(),
+    final studentName =
+        (studentData['fullName'] as String?)?.trim() ?? 'Unknown Student';
+    final email = (studentData['email'] as String?)?.trim() ?? '';
+    final levelId = (studentData['levelId'] as String?)?.trim() ?? '';
+    final groupId = (studentData['groupId'] as String?)?.trim() ?? '';
+    final levelName = await _resolveName(_levels, levelId, fallback: levelId);
+    final groupName = await _resolveName(_groups, groupId, fallback: groupId);
+    final teacherName =
+        (absenceData['teacherName'] as String?)?.trim() ?? 'Unknown Teacher';
+    final teacherId = (absenceData['teacherId'] as String?)?.trim() ?? '';
+    final subjectId = (absenceData['subjectId'] as String?)?.trim() ?? '';
+    final subjectName =
+        (absenceData['subjectName'] as String?)?.trim() ??
+        (absenceData['courseName'] as String?)?.trim() ??
+        'Unknown Subject';
+
+    DateTime absenceDate;
+    final rawCreatedAt = absenceData['createdAt'];
+    if (rawCreatedAt is Timestamp) {
+      absenceDate = rawCreatedAt.toDate();
+    } else if (rawCreatedAt is DateTime) {
+      absenceDate = rawCreatedAt;
+    } else {
+      absenceDate = DateTime.now();
+    }
+
+    final storagePath =
+        'justifications/$studentId/$absenceId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    final storageRef = FirebaseStorage.instance.ref(storagePath);
+    final metadata = SettableMetadata(
+      contentType: _resolveContentType(fileType, fileName),
+    );
+
+    String? uploadedFileUrl;
+    try {
+      final uploadTask = await storageRef.putData(fileBytes, metadata);
+      uploadedFileUrl = await uploadTask.ref.getDownloadURL();
+
+      await _firestore.runTransaction((tx) async {
+        final refreshedAbsence = await tx.get(absenceRef);
+        final refreshedStudent = await tx.get(studentRef);
+        if (!refreshedAbsence.exists) {
+          throw Exception('Absence no longer exists.');
+        }
+        if (!refreshedStudent.exists) {
+          throw Exception('Student no longer exists.');
+        }
+
+        final refreshedData =
+            refreshedAbsence.data() ?? const <String, dynamic>{};
+        final refreshedStudentData =
+            refreshedStudent.data() ?? const <String, dynamic>{};
+        final refreshedStatus =
+            (refreshedData['status'] as String?)?.toLowerCase() ?? 'pending';
+        final refreshedJustificationId =
+            (refreshedData['justificationId'] as String?)?.trim() ?? '';
+
+        final pendingAbsence =
+            (refreshedStudentData['pendingAbsence'] as num?)?.toInt() ?? 0;
+        final justifiedAbsence =
+            (refreshedStudentData['justifiedAbsence'] as num?)?.toInt() ?? 0;
+
+        if (refreshedStatus != 'pending' ||
+            refreshedJustificationId.isNotEmpty) {
+          throw Exception('Justification already submitted for this absence.');
+        }
+
+        tx.set(justificationRef, {
+          'absenceId': absenceId,
+          'studentId': studentId,
+          'studentName': studentName,
+          'email': email,
+          'teacherId': teacherId,
+          'teacherName': teacherName,
+          'subjectId': subjectId,
+          'subject': subjectName,
+          'levelName': levelName,
+          'groupName': groupName,
+          'absenceDate': Timestamp.fromDate(absenceDate),
+          'reason': reason.trim(),
+          'fileUrl': uploadedFileUrl,
+          'fileType': fileType.trim(),
+          'status': 'pending',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        tx.update(absenceRef, {
+          'status': 'submitted',
+          'justificationId': justificationRef.id,
+          'submittedAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        tx.update(studentRef, {
+          'pendingAbsence': pendingAbsence > 0 ? pendingAbsence - 1 : 0,
+          'justifiedAbsence': justifiedAbsence + 1,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
 
-      tx.update(studentRef, {
-        'pendingAbsence': pending > 0 ? pending - 1 : 0,
-        'justifiedAbsence': justified + 1,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    });
+      return justificationRef.id;
+    } catch (e) {
+      if (uploadedFileUrl != null) {
+        try {
+          await storageRef.delete();
+        } catch (_) {
+          // Ignore cleanup failures.
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> _resolveName(
+    CollectionReference<Map<String, dynamic>> collection,
+    String id, {
+    required String fallback,
+  }) async {
+    if (id.trim().isEmpty) return fallback;
+    final snap = await collection.doc(id).get();
+    final data = snap.data();
+    return (data?['name'] as String?)?.trim() ?? fallback;
+  }
+
+  String _resolveContentType(String fileType, String fileName) {
+    final normalizedType = fileType.trim().toLowerCase();
+    final normalizedName = fileName.trim().toLowerCase();
+
+    if (normalizedType == 'pdf' || normalizedName.endsWith('.pdf')) {
+      return 'application/pdf';
+    }
+    if (['jpg', 'jpeg'].contains(normalizedType) ||
+        normalizedName.endsWith('.jpg') ||
+        normalizedName.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (normalizedType == 'png' || normalizedName.endsWith('.png')) {
+      return 'image/png';
+    }
+    return 'application/octet-stream';
   }
 
   Future<void> rejectAbsence({
@@ -325,5 +509,93 @@ class StudentsFirestoreService {
     final total = totalPresence + totalAbsence;
     if (total == 0) return 0;
     return totalPresence / total;
+  }
+
+  /// Create a notification for a student
+  Future<String> createNotification({
+    required String studentId,
+    required String type,
+    required String title,
+    required String message,
+    String? relatedAbsenceId,
+    String? relatedJustificationId,
+  }) async {
+    final normalizedStudentId = studentId.trim();
+    if (normalizedStudentId.isEmpty) {
+      throw Exception('Student ID is required');
+    }
+
+    final doc = _notifications.doc();
+    await doc.set({
+      'studentId': normalizedStudentId,
+      'type': type.toLowerCase(),
+      'title': title.trim(),
+      'message': message.trim(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'isRead': false,
+      if (relatedAbsenceId != null && relatedAbsenceId.trim().isNotEmpty)
+        'relatedAbsenceId': relatedAbsenceId.trim(),
+      if (relatedJustificationId != null &&
+          relatedJustificationId.trim().isNotEmpty)
+        'relatedJustificationId': relatedJustificationId.trim(),
+    });
+    return doc.id;
+  }
+
+  /// Watch notifications for a student in real-time
+  Stream<List<NotificationFeatureModel>> watchNotificationsByStudent(
+    String studentId,
+  ) {
+    final normalizedStudentId = studentId.trim();
+    if (normalizedStudentId.isEmpty) {
+      return Stream.value(const <NotificationFeatureModel>[]);
+    }
+
+    return _notifications
+        .where('studentId', isEqualTo: normalizedStudentId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) =>
+                  NotificationFeatureModel.fromMap(doc.id, doc.data()))
+              .toList();
+        });
+  }
+
+  /// Mark a notification as read
+  Future<void> markNotificationAsRead(String notificationId) {
+    return _notifications.doc(notificationId).update({'isRead': true});
+  }
+
+  /// Mark all notifications as read for a student
+  Future<void> markAllNotificationsAsRead(String studentId) async {
+    final normalizedStudentId = studentId.trim();
+    if (normalizedStudentId.isEmpty) return;
+
+    final snapshot = await _notifications
+        .where('studentId', isEqualTo: normalizedStudentId)
+        .where('isRead', isEqualTo: false)
+        .get();
+
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {'isRead': true});
+    }
+    await batch.commit();
+  }
+
+  /// Get count of unread notifications for a student
+  Stream<int> watchUnreadNotificationCount(String studentId) {
+    final normalizedStudentId = studentId.trim();
+    if (normalizedStudentId.isEmpty) {
+      return Stream.value(0);
+    }
+
+    return _notifications
+        .where('studentId', isEqualTo: normalizedStudentId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 }

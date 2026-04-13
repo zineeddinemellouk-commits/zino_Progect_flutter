@@ -6,10 +6,14 @@ class StudentInfoCard extends StatelessWidget {
     super.key,
     required this.student,
     this.fallbackGroupName,
+    this.onEdit,
+    this.onDelete,
   });
 
   final StudentModel student;
   final String? fallbackGroupName;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   Color _attendanceColor(int value) {
     if (value >= 90) return Colors.green;
@@ -54,12 +58,34 @@ class StudentInfoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    student.fullName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          student.fullName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (onEdit != null)
+                        IconButton(
+                          onPressed: onEdit,
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Edit',
+                        ),
+                      if (onDelete != null)
+                        IconButton(
+                          onPressed: onDelete,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
+                          tooltip: 'Delete',
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(

@@ -208,6 +208,8 @@ class FirestoreService {
     required String fullName,
     required String email,
     required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
     String? authUid,
   }) async {
     final doc = _teachers.doc();
@@ -216,6 +218,8 @@ class FirestoreService {
       fullName: fullName,
       email: email,
       subjectIds: subjectIds,
+      levelIds: levelIds,
+      groupIds: groupIds,
     );
     final data = <String, dynamic>{
       ...teacher.toMap(),
@@ -233,11 +237,15 @@ class FirestoreService {
     required String fullName,
     required String email,
     required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
   }) {
     return _teachers.doc(id).update({
       'fullName': fullName,
       'email': email,
       'subjectIds': subjectIds,
+      'levelIds': levelIds,
+      'groupIds': groupIds,
     });
   }
 

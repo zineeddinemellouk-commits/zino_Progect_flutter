@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:test/models/class_model.dart';
+import 'package:test/models/group_model.dart';
+import 'package:test/models/level_model.dart';
 import 'package:test/models/subject_model.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'common_widgets.dart';
@@ -20,7 +21,8 @@ class _AddTeacherState extends State<AddTeacher> {
   final _confirmPasswordController = TextEditingController();
 
   final List<String> _selectedSubjects = [];
-  final List<String> _selectedClasses = [];
+  final Set<String> _selectedGroupIds = <String>{};
+  final Map<String, String> _groupLevelIds = <String, String>{};
   bool _isSaving = false;
 
   @override
@@ -48,9 +50,24 @@ class _AddTeacherState extends State<AddTeacher> {
       );
       return;
     }
-    if (_selectedClasses.isEmpty) {
+    if (_selectedGroupIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one class')),
+        const SnackBar(content: Text('Please select at least one group')),
+      );
+      return;
+    }
+
+    final selectedLevelIds = _selectedGroupIds
+        .map((groupId) => _groupLevelIds[groupId])
+        .whereType<String>()
+        .map((levelId) => levelId.trim())
+        .where((levelId) => levelId.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (selectedLevelIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to resolve levels from groups.')),
       );
       return;
     }
@@ -62,6 +79,8 @@ class _AddTeacherState extends State<AddTeacher> {
         email: _emailController.text,
         password: _passwordController.text,
         subjectIds: _selectedSubjects,
+        levelIds: selectedLevelIds,
+        groupIds: _selectedGroupIds.toList(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -264,49 +283,106 @@ class _AddTeacherState extends State<AddTeacher> {
                         ),
                         const SizedBox(height: 20),
                         const Text(
-                          "Classes",
+                          "Assigned Groups",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 10),
-                        StreamBuilder<List<ClassModel>>(
+                        StreamBuilder<List<LevelModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
-                              .watchClasses(),
+                              .watchLevels(),
                           builder: (context, snapshot) {
-                            final classes =
-                                snapshot.data ?? const <ClassModel>[];
+                            final levels =
+                                snapshot.data ?? const <LevelModel>[];
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const LinearProgressIndicator();
                             }
-                            if (classes.isEmpty) {
-                              return const Text('No classes found.');
+                            if (levels.isEmpty) {
+                              return const Text('No levels found.');
                             }
-                            return Wrap(
-                              spacing: 8,
-                              children: classes.map((classLevel) {
-                                final isSelected = _selectedClasses.contains(
-                                  classLevel.id,
-                                );
-                                return FilterChip(
-                                  label: Text(classLevel.name),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedClasses.add(classLevel.id);
-                                      } else {
-                                        _selectedClasses.remove(classLevel.id);
-                                      }
-                                    });
-                                  },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                            return Column(
+                              children: levels.map((level) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        level.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      StreamBuilder<List<GroupModel>>(
+                                        stream: context
+                                            .watch<StudentManagementProvider>()
+                                            .watchGroupsByLevel(
+                                              levelId: level.id,
+                                            ),
+                                        builder: (context, groupSnapshot) {
+                                          final groups =
+                                              groupSnapshot.data ??
+                                              const <GroupModel>[];
+                                          if (groupSnapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return const LinearProgressIndicator();
+                                          }
+                                          if (groups.isEmpty) {
+                                            return const Text(
+                                              'No groups found.',
+                                            );
+                                          }
+
+                                          for (final group in groups) {
+                                            _groupLevelIds.putIfAbsent(
+                                              group.id,
+                                              () => group.levelId,
+                                            );
+                                          }
+
+                                          return Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children: groups.map((group) {
+                                              final isSelected =
+                                                  _selectedGroupIds.contains(
+                                                    group.id,
+                                                  );
+                                              return FilterChip(
+                                                label: Text(group.name),
+                                                selected: isSelected,
+                                                onSelected: (selected) {
+                                                  setState(() {
+                                                    if (selected) {
+                                                      _selectedGroupIds.add(
+                                                        group.id,
+                                                      );
+                                                    } else {
+                                                      _selectedGroupIds.remove(
+                                                        group.id,
+                                                      );
+                                                    }
+                                                  });
+                                                },
+                                                selectedColor: const Color(
+                                                  0xFF2563EB,
+                                                ).withOpacity(0.2),
+                                                checkmarkColor: const Color(
+                                                  0xFF2563EB,
+                                                ),
+                                              );
+                                            }).toList(),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 );
                               }).toList(),
                             );

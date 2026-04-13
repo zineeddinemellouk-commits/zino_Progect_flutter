@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/teachers/models/teacher_feature_model.dart';
-import 'package:test/models/class_model.dart';
 import 'package:test/models/group_model.dart';
 import 'package:test/models/level_model.dart';
 import 'package:test/models/subject_model.dart';
@@ -10,7 +9,8 @@ class TeacherDashboardData {
   const TeacherDashboardData({
     required this.teacher,
     required this.subjects,
-    required this.classes,
+    required this.levels,
+    required this.groups,
     required this.students,
     required this.historyCount,
     required this.activeStudents,
@@ -20,7 +20,8 @@ class TeacherDashboardData {
 
   final TeacherFeatureModel teacher;
   final List<SubjectModel> subjects;
-  final List<ClassModel> classes;
+  final List<LevelModel> levels;
+  final List<GroupModel> groups;
   final List<StudentFeatureModel> students;
   final int historyCount;
   final int activeStudents;
@@ -110,9 +111,6 @@ class TeachersFirestoreService {
   CollectionReference<Map<String, dynamic>> get _subjects =>
       _firestore.collection('subjects');
 
-  CollectionReference<Map<String, dynamic>> get _classes =>
-      _firestore.collection('classes');
-
   CollectionReference<Map<String, dynamic>> get _groups =>
       _firestore.collection('groups');
 
@@ -128,6 +126,9 @@ class TeachersFirestoreService {
   CollectionReference<Map<String, dynamic>> get _attendanceHistory =>
       _firestore.collection('attendance_history');
 
+  CollectionReference<Map<String, dynamic>> get _notifications =>
+      _firestore.collection('notifications');
+
   Stream<TeacherDashboardData?> watchTeacherDashboard({
     String? teacherId,
     String? teacherEmail,
@@ -142,18 +143,18 @@ class TeachersFirestoreService {
 
       final teacher = TeacherFeatureModel.fromMap(doc.id, doc.data);
       final subjects = await _fetchSubjectsForTeacher(teacher);
+      final groups = await _fetchGroupsForTeacher(teacher);
+      final mergedLevelIds = <String>{
+        ...teacher.levelIds,
+        ...groups.map((group) => group.levelId),
+      }.where((id) => id.trim().isNotEmpty).toList();
 
-      final mergedClassIds = <String>{
-        ...teacher.classIds,
-        ...subjects.expand((s) => s.classIds),
-      }.where((id) => id.trim().isNotEmpty).toSet();
-
-      final classes = await _fetchClassesByIds(mergedClassIds.toList());
-      final classIds = classes.map((e) => e.id).toList();
+      final levels = await _fetchLevelsByIds(mergedLevelIds);
+      final groupIds = groups.map((e) => e.id).toList();
       final subjectIds = subjects.map((e) => e.id).toList();
 
       final students = await _fetchStudents(
-        classIds: classIds,
+        groupIds: groupIds,
         subjectIds: subjectIds,
       );
 
@@ -174,7 +175,8 @@ class TeachersFirestoreService {
       return TeacherDashboardData(
         teacher: teacher,
         subjects: subjects,
-        classes: classes,
+        levels: levels,
+        groups: groups,
         students: students,
         historyCount: historyCount,
         activeStudents: activeStudents,
@@ -201,41 +203,7 @@ class TeachersFirestoreService {
         return const <TeacherGroupOverview>[];
       }
 
-      final groupIds = students
-          .map((e) => e.groupId.trim())
-          .where((id) => id.isNotEmpty)
-          .toSet()
-          .toList();
-
-      final groupsById = <String, GroupModel>{};
-      if (groupIds.isNotEmpty) {
-        final groupDocs = await _fetchDocsByIds(
-          collection: _groups,
-          ids: groupIds,
-        );
-        for (final doc in groupDocs) {
-          groupsById[doc.id] = GroupModel.fromMap(doc.id, doc.data());
-        }
-      }
-
-      final levelIds = <String>{
-        ...students.map((s) => s.levelId.trim()).where((id) => id.isNotEmpty),
-        ...groupsById.values
-            .map((g) => g.levelId.trim())
-            .where((id) => id.isNotEmpty),
-      }.toList();
-
-      final levelsById = <String, LevelModel>{};
-      if (levelIds.isNotEmpty) {
-        final levelDocs = await _fetchDocsByIds(
-          collection: _levels,
-          ids: levelIds,
-        );
-        for (final doc in levelDocs) {
-          levelsById[doc.id] = LevelModel.fromMap(doc.id, doc.data());
-        }
-      }
-
+      final overviews = <TeacherGroupOverview>[];
       final countByGroup = <String, int>{};
       for (final student in students) {
         final groupId = student.groupId.trim();
@@ -243,26 +211,15 @@ class TeachersFirestoreService {
         countByGroup[groupId] = (countByGroup[groupId] ?? 0) + 1;
       }
 
-      final overviews = <TeacherGroupOverview>[];
-      for (final entry in countByGroup.entries) {
-        final groupId = entry.key;
-        final group = groupsById[groupId];
+      final levelsById = {
+        for (final level in dashboard.levels) level.id: level,
+      };
 
-        final groupName = (group?.name.trim().isNotEmpty ?? false)
-            ? group!.name.trim()
-            : groupId;
+      for (final group in dashboard.groups) {
+        final groupId = group.id;
+        final studentCount = countByGroup[groupId] ?? 0;
 
-        final fallbackStudent = students.where(
-          (s) => s.groupId.trim() == groupId,
-        );
-        final fallbackLevelId = fallbackStudent.isEmpty
-            ? ''
-            : fallbackStudent.first.levelId.trim();
-
-        final levelId = (group?.levelId.trim().isNotEmpty ?? false)
-            ? group!.levelId.trim()
-            : fallbackLevelId;
-
+        final levelId = group.levelId.trim();
         final levelName = (levelsById[levelId]?.name.trim().isNotEmpty ?? false)
             ? levelsById[levelId]!.name.trim()
             : (levelId.isEmpty ? '-' : levelId);
@@ -270,10 +227,12 @@ class TeachersFirestoreService {
         overviews.add(
           TeacherGroupOverview(
             groupId: groupId,
-            groupName: groupName,
+            groupName: group.name.trim().isNotEmpty
+                ? group.name.trim()
+                : groupId,
             levelId: levelId,
             levelName: levelName,
-            studentCount: entry.value,
+            studentCount: studentCount,
           ),
         );
       }
@@ -342,6 +301,32 @@ class TeachersFirestoreService {
         });
   }
 
+  Stream<List<TeacherAttendanceHistoryItem>> watchGroupAttendanceHistory(
+    String teacherId,
+    String groupId,
+  ) {
+    final normalizedTeacherId = teacherId.trim();
+    final normalizedGroupId = groupId.trim();
+    if (normalizedTeacherId.isEmpty || normalizedGroupId.isEmpty) {
+      return Stream.value(const <TeacherAttendanceHistoryItem>[]);
+    }
+
+    return _attendanceHistory
+        .where('teacherId', isEqualTo: normalizedTeacherId)
+        .where('groupId', isEqualTo: normalizedGroupId)
+        .snapshots()
+        .map((snapshot) {
+          final items = snapshot.docs
+              .map(
+                (doc) =>
+                    TeacherAttendanceHistoryItem.fromMap(doc.id, doc.data()),
+              )
+              .toList();
+          items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return items;
+        });
+  }
+
   Future<void> submitGroupAttendance({
     required String teacherId,
     required TeacherGroupOverview group,
@@ -352,6 +337,36 @@ class TeachersFirestoreService {
     final normalizedTeacherId = teacherId.trim();
     if (normalizedTeacherId.isEmpty) {
       throw Exception('Teacher ID is required');
+    }
+
+    final teacherSnap = await _teachers.doc(normalizedTeacherId).get();
+    final teacherData = teacherSnap.data() ?? const <String, dynamic>{};
+    final teacherName =
+        (teacherData['fullName'] as String?)?.trim() ??
+        (teacherData['email'] as String?)?.trim() ??
+        'Unknown Teacher';
+
+    String resolvedSubjectId = (subjectId ?? '').trim();
+    String resolvedSubjectName = (subjectName ?? '').trim();
+    if (resolvedSubjectId.isEmpty && teacherData['subjectIds'] is List) {
+      final teacherSubjectIds = (teacherData['subjectIds'] as List<dynamic>)
+          .map((e) => e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
+      if (teacherSubjectIds.isNotEmpty) {
+        resolvedSubjectId = teacherSubjectIds.first;
+      }
+    }
+
+    if (resolvedSubjectName.isEmpty && resolvedSubjectId.isNotEmpty) {
+      final subjectSnap = await _subjects.doc(resolvedSubjectId).get();
+      final subjectData = subjectSnap.data() ?? const <String, dynamic>{};
+      resolvedSubjectName =
+          (subjectData['name'] as String?)?.trim() ?? 'Unknown Subject';
+    }
+
+    if (resolvedSubjectName.isEmpty) {
+      resolvedSubjectName = group.groupName;
     }
 
     final studentIds = isPresentByStudentId.keys
@@ -408,17 +423,18 @@ class TeachersFirestoreService {
         batch.set(absenceRef, {
           'studentId': studentId,
           'teacherId': normalizedTeacherId,
+          'teacherName': teacherName,
+          'subjectId': resolvedSubjectId,
+          'subjectName': resolvedSubjectName,
           'groupId': group.groupId,
           'levelId': group.levelId,
           'createdAt': Timestamp.fromDate(now),
           'deadlineAt': Timestamp.fromDate(deadlineAt),
           'status': 'pending',
-          'courseCode': (subjectId ?? '').trim().isEmpty
+          'courseCode': resolvedSubjectId.isEmpty
               ? group.groupId
-              : subjectId!.trim(),
-          'courseName': (subjectName ?? '').trim().isEmpty
-              ? group.groupName
-              : subjectName!.trim(),
+              : resolvedSubjectId,
+          'courseName': resolvedSubjectName,
         });
       }
     }
@@ -426,10 +442,13 @@ class TeachersFirestoreService {
     final historyRef = _attendanceHistory.doc();
     batch.set(historyRef, {
       'teacherId': normalizedTeacherId,
+      'teacherName': teacherName,
       'groupId': group.groupId,
       'groupName': group.groupName,
       'levelId': group.levelId,
       'levelName': group.levelName,
+      'subjectId': resolvedSubjectId,
+      'subjectName': resolvedSubjectName,
       'presentStudentIds': presentStudentIds,
       'absentStudentIds': absentStudentIds,
       'presentCount': presentStudentIds.length,
@@ -442,6 +461,24 @@ class TeachersFirestoreService {
     });
 
     await batch.commit();
+
+    // Create notifications for absent students
+    for (final studentId in absentStudentIds) {
+      try {
+        await _notifications.doc().set({
+          'studentId': studentId,
+          'type': 'absencerecorded',
+          'title': 'New Absence Recorded',
+          'message':
+              'You were marked absent in $resolvedSubjectName by $teacherName',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
+      } catch (_) {
+        // Continue with other notifications even if one fails
+        // Silently skip notification creation errors
+      }
+    }
   }
 
   Future<List<SubjectModel>> _fetchSubjectsForTeacher(
@@ -471,35 +508,58 @@ class TeachersFirestoreService {
     return list;
   }
 
-  Future<List<ClassModel>> _fetchClassesByIds(List<String> classIds) async {
-    if (classIds.isEmpty) {
-      return const <ClassModel>[];
+  Future<List<GroupModel>> _fetchGroupsForTeacher(
+    TeacherFeatureModel teacher,
+  ) async {
+    final groupIds = <String>{
+      ...teacher.groupIds,
+    }.where((id) => id.trim().isNotEmpty).toList();
+
+    if (groupIds.isEmpty) {
+      return const <GroupModel>[];
     }
 
-    final classDocs = await _fetchDocsByIds(
-      collection: _classes,
-      ids: classIds,
+    final groupDocs = await _fetchDocsByIds(collection: _groups, ids: groupIds);
+
+    final groups = groupDocs
+        .map((doc) => GroupModel.fromMap(doc.id, doc.data()))
+        .toList();
+    groups.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return groups;
+  }
+
+  Future<List<LevelModel>> _fetchLevelsByIds(List<String> levelIds) async {
+    final normalized = levelIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    if (normalized.isEmpty) {
+      return const <LevelModel>[];
+    }
+
+    final levelDocs = await _fetchDocsByIds(
+      collection: _levels,
+      ids: normalized,
     );
 
-    final classes = classDocs
-        .map((doc) => ClassModel.fromMap(doc.id, doc.data()))
+    final levels = levelDocs
+        .map((doc) => LevelModel.fromMap(doc.id, doc.data()))
         .toList();
-    classes.sort(
-      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
-    return classes;
+    levels.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return levels;
   }
 
   Future<List<StudentFeatureModel>> _fetchStudents({
-    required List<String> classIds,
+    required List<String> groupIds,
     required List<String> subjectIds,
   }) async {
     final studentsById = <String, StudentFeatureModel>{};
 
-    if (classIds.isNotEmpty) {
-      final classChunks = _chunkList(classIds, 10);
-      for (final chunk in classChunks) {
-        final snap = await _students.where('classId', whereIn: chunk).get();
+    if (groupIds.isNotEmpty) {
+      final groupChunks = _chunkList(groupIds, 10);
+      for (final chunk in groupChunks) {
+        final snap = await _students.where('groupId', whereIn: chunk).get();
         for (final doc in snap.docs) {
           studentsById[doc.id] = StudentFeatureModel.fromMap(
             doc.id,

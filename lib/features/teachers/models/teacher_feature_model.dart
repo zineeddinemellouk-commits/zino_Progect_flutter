@@ -6,10 +6,12 @@ class TeacherFeatureModel {
     required this.fullName,
     required this.email,
     required this.subjectIds,
-    required this.classIds,
+    required this.levelIds,
+    required this.groupIds,
     required this.createdAt,
     required this.totalStudents,
-    required this.totalClasses,
+    required this.totalLevels,
+    required this.totalGroups,
     required this.pendingRequests,
     required this.attendanceRate,
   });
@@ -18,14 +20,28 @@ class TeacherFeatureModel {
   final String fullName;
   final String email;
   final List<String> subjectIds;
-  final List<String> classIds;
+  final List<String> levelIds;
+  final List<String> groupIds;
   final DateTime createdAt;
   final int totalStudents;
-  final int totalClasses;
+  final int totalLevels;
+  final int totalGroups;
   final int pendingRequests;
   final double attendanceRate;
 
   factory TeacherFeatureModel.fromMap(String id, Map<String, dynamic> map) {
+    List<String> readList(String key, {List<String> fallback = const []}) {
+      return (map[key] as List<dynamic>? ?? fallback)
+          .map((e) => e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList();
+    }
+
+    final legacyGroupIds = (map['classIds'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
     final timestamp = map['createdAt'];
     DateTime createdAt;
     if (timestamp is Timestamp) {
@@ -43,15 +59,13 @@ class TeacherFeatureModel {
           (map['name'] as String?)?.trim() ??
           '',
       email: (map['email'] as String?)?.trim() ?? '',
-      subjectIds: (map['subjectIds'] as List<dynamic>? ?? const [])
-          .map((e) => e.toString())
-          .toList(),
-      classIds: (map['classIds'] as List<dynamic>? ?? const [])
-          .map((e) => e.toString())
-          .toList(),
+      subjectIds: readList('subjectIds'),
+      levelIds: readList('levelIds'),
+      groupIds: readList('groupIds', fallback: legacyGroupIds),
       createdAt: createdAt,
       totalStudents: (map['totalStudents'] as num?)?.toInt() ?? 0,
-      totalClasses: (map['totalClasses'] as num?)?.toInt() ?? 0,
+      totalLevels: (map['totalLevels'] as num?)?.toInt() ?? 0,
+      totalGroups: (map['totalGroups'] as num?)?.toInt() ?? 0,
       pendingRequests: (map['pendingRequests'] as num?)?.toInt() ?? 0,
       attendanceRate: (map['attendanceRate'] as num?)?.toDouble() ?? 0,
     );
@@ -62,9 +76,11 @@ class TeacherFeatureModel {
       'fullName': fullName.trim(),
       'email': email.trim(),
       'subjectIds': subjectIds,
-      'classIds': classIds,
+      'levelIds': levelIds,
+      'groupIds': groupIds,
       'totalStudents': totalStudents,
-      'totalClasses': totalClasses,
+      'totalLevels': totalLevels,
+      'totalGroups': totalGroups,
       'pendingRequests': pendingRequests,
       'attendanceRate': attendanceRate,
     };

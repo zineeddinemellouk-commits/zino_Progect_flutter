@@ -24,7 +24,7 @@ class TeacherAttendanceGroupsPage extends StatelessWidget {
         backgroundColor: const Color(0xFFF2F4FA),
         elevation: 0,
         title: const Text(
-          'My Classes',
+          'My Groups',
           style: TextStyle(
             color: Color(0xFF101828),
             fontWeight: FontWeight.w800,
@@ -69,7 +69,7 @@ class TeacherAttendanceGroupsPage extends StatelessWidget {
           if (groups.isEmpty) {
             return const Center(
               child: Text(
-                'No groups are assigned to this teacher.',
+                'No groups are assigned to this teacher yet.',
                 style: TextStyle(color: Color(0xFF667085)),
               ),
             );

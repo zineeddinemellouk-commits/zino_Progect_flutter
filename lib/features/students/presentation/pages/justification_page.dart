@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,10 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 
 class JustificationPage extends StatefulWidget {
-  const JustificationPage({
-    required this.absence,
-    super.key,
-  });
+  const JustificationPage({required this.absence, super.key});
 
   final AbsenceFeatureModel absence;
 
@@ -20,12 +18,12 @@ class JustificationPage extends StatefulWidget {
 class _JustificationPageState extends State<JustificationPage> {
   late final FirebaseFirestore _firestore;
   late final FirebaseStorage _storage;
-  
+
   final TextEditingController _detailsController = TextEditingController();
   String? _selectedReason;
   PlatformFile? _selectedFile;
   bool _isSubmitting = false;
-  
+
   final List<String> _reasons = ['Medical', 'Family', 'Personal', 'Other'];
   final List<IconData> _reasonIcons = [
     Icons.medical_services_outlined,
@@ -49,17 +47,49 @@ class _JustificationPageState extends State<JustificationPage> {
 
   Future<void> _pickFile() async {
     try {
+      print('[JustificationPage] Starting file picker...');
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        withData: true,
+        withData: false, // Get file path instead of bytes
       );
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
-        
+        print(
+          '[JustificationPage] File picked - Name: ${file.name}, Path: ${file.path}, Size: ${file.size}',
+        );
+
+        // Validate file exists
+        if (file.path == null || file.path!.isEmpty) {
+          print('[JustificationPage] ERROR: File path is null or empty');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error: Invalid file path')),
+            );
+          }
+          return;
+        }
+
+        // Validate file actually exists
+        final fileExists = await File(file.path!).exists();
+        if (!fileExists) {
+          print(
+            '[JustificationPage] ERROR: File does not exist at path: ${file.path}',
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Error: File not found')),
+            );
+          }
+          return;
+        }
+
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
+          print(
+            '[JustificationPage] ERROR: File size ${file.size} exceeds 5MB limit',
+          );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('File size must be less than 5MB')),
@@ -69,85 +99,183 @@ class _JustificationPageState extends State<JustificationPage> {
         }
 
         setState(() => _selectedFile = file);
-        print('[JustificationPage] File selected: ${file.name} (${file.size} bytes)');
+        print(
+          '[JustificationPage] ✓ File selected: ${file.name} (${file.size} bytes)',
+        );
+      } else {
+        print('[JustificationPage] File picker cancelled or no file selected');
       }
     } catch (e) {
-      print('[JustificationPage] Error picking file: $e');
+      print('[JustificationPage] ERROR picking file: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
       }
     }
   }
 
+  /// Get MIME type from file extension
+  String _getMimeType(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
   Future<String?> _uploadFile() async {
-    if (_selectedFile == null || _selectedFile!.bytes == null) {
+    if (_selectedFile == null ||
+        _selectedFile!.path == null ||
+        _selectedFile!.path!.isEmpty) {
+      print(
+        '[JustificationPage] ⚠️ ABORT UPLOAD: No file selected or null path',
+      );
       return null;
     }
 
     try {
-      print('[JustificationPage] Uploading file: ${_selectedFile!.name}');
-      
+      final filePath = _selectedFile!.path!;
+      final fileName = _selectedFile!.name;
+
+      print('[JustificationPage] 📤 STARTING FILE UPLOAD');
+      print('[JustificationPage]   Local file path: $filePath');
+      print('[JustificationPage]   File name: $fileName');
+      print('[JustificationPage]   File size: ${_selectedFile!.size} bytes');
+
+      // Verify file exists
+      final file = File(filePath);
+      final fileExists = await file.exists();
+      if (!fileExists) {
+        throw Exception('Local file does not exist at: $filePath');
+      }
+      print('[JustificationPage]   ✓ File exists on device');
+
+      // Get authenticated user
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception('User not authenticated');
       }
+      print('[JustificationPage]   Student UID: ${currentUser.uid}');
 
-      final fileName =
-          '${currentUser.uid}/${widget.absence.id}/${DateTime.now().millisecondsSinceEpoch}_${_selectedFile!.name}';
-      final ref = _storage.ref().child('justifications/$fileName');
-      
-      final task = await ref.putData(
-        _selectedFile!.bytes!,
-        SettableMetadata(contentType: _selectedFile!.extension),
+      // Create unique storage path
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      const storagePath = 'justifications';
+      final uniqueFileName =
+          '${currentUser.uid}/${widget.absence.id}/${timestamp}_$fileName';
+      final ref = _storage.ref().child(storagePath).child(uniqueFileName);
+
+      print('[JustificationPage]   Storage path: $storagePath/$uniqueFileName');
+
+      // Upload file with proper metadata
+      final mimeType = _getMimeType(_selectedFile!.extension ?? 'pdf');
+      print('[JustificationPage]   MIME type: $mimeType');
+
+      final metadata = SettableMetadata(
+        contentType: mimeType,
+        customMetadata: {
+          'studentId': currentUser.uid,
+          'absenceId': widget.absence.id,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
       );
-      
-      final url = await task.ref.getDownloadURL();
-      print('[JustificationPage] File uploaded successfully: $url');
-      return url;
+
+      print('[JustificationPage]   📝 Uploading to Firebase Storage...');
+      final uploadTask = ref.putFile(file, metadata);
+
+      // Monitor upload progress
+      uploadTask.snapshotEvents.listen((event) {
+        final percent = (event.bytesTransferred / event.totalBytes) * 100;
+        print('[JustificationPage]   Progress: ${percent.toStringAsFixed(1)}%');
+      });
+
+      // Wait for upload to complete
+      final taskSnapshot = await uploadTask;
+      print('[JustificationPage]   ✓ Upload completed');
+
+      // Get download URL
+      print('[JustificationPage]   🔗 Fetching download URL...');
+      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
+      print('[JustificationPage]   ✓ Download URL: $downloadUrl');
+
+      return downloadUrl;
     } catch (e) {
-      print('[JustificationPage] Error uploading file: $e');
+      print('[JustificationPage] ❌ ERROR UPLOADING FILE: $e');
       rethrow;
     }
   }
 
   Future<void> _submitJustification() async {
-    // Validation
+    // ========== STEP 1: VALIDATION ==========
+    print(
+      '\n[JustificationPage] ========== STARTING JUSTIFICATION SUBMISSION ==========',
+    );
+
     if (_selectedReason == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a reason for absence')),
-      );
+      print('[JustificationPage] ❌ VALIDATION FAILED: No reason selected');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a reason for absence')),
+        );
+      }
       return;
     }
+    print('[JustificationPage] ✓ Reason selected: $_selectedReason');
 
     if (_selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload a supporting document')),
-      );
+      print('[JustificationPage] ❌ VALIDATION FAILED: No file selected');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please upload a supporting document')),
+        );
+      }
       return;
     }
+    print('[JustificationPage] ✓ File selected: ${_selectedFile!.name}');
 
     setState(() => _isSubmitting = true);
 
     try {
+      // ========== STEP 2: AUTHENTICATE ==========
+      print('[JustificationPage] Step 1: Getting current user...');
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        throw Exception('User not authenticated');
+        throw Exception('❌ User not authenticated');
       }
+      print('[JustificationPage] ✓ Authenticated as: ${currentUser.uid}');
 
-      print('[JustificationPage] Starting justification submission...');
-      print('[JustificationPage] Student ID: ${currentUser.uid}');
-      print('[JustificationPage] Absence ID: ${widget.absence.id}');
-      print('[JustificationPage] Reason: $_selectedReason');
+      // ========== STEP 3: LOG SUBMISSION DETAILS ==========
+      print('[JustificationPage] Step 2: Submission details:');
+      print('[JustificationPage]   Student ID: ${currentUser.uid}');
+      print('[JustificationPage]   Absence ID: ${widget.absence.id}');
+      print('[JustificationPage]   Reason: $_selectedReason');
+      print('[JustificationPage]   Details: ${_detailsController.text.trim()}');
+      print('[JustificationPage]   File: ${_selectedFile!.name}');
 
-      // Upload file
+      // ========== STEP 4: UPLOAD FILE TO FIREBASE STORAGE ==========
+      print(
+        '[JustificationPage] Step 3: Uploading file to Firebase Storage...',
+      );
       final fileUrl = await _uploadFile();
 
-      print('[JustificationPage] File URL: $fileUrl');
+      if (fileUrl == null || fileUrl.isEmpty) {
+        throw Exception('❌ Failed to get download URL after upload');
+      }
+      print('[JustificationPage] ✓ File uploaded successfully');
+      print('[JustificationPage]   URL: $fileUrl');
 
-      // Create justification document
-      await _firestore.collection('justifications').add({
+      // ========== STEP 5: CREATE JUSTIFICATION DOCUMENT IN FIRESTORE ==========
+      print(
+        '[JustificationPage] Step 4: Creating justification document in Firestore...',
+      );
+
+      final justificationData = {
         'studentId': currentUser.uid,
         'absenceId': widget.absence.id,
         'subjectName': widget.absence.subjectName,
@@ -155,30 +283,53 @@ class _JustificationPageState extends State<JustificationPage> {
         'reason': _selectedReason,
         'details': _detailsController.text.trim(),
         'fileUrl': fileUrl,
-        'fileType': _selectedFile!.extension,
+        'fileType': _selectedFile!.extension ?? 'unknown',
         'fileName': _selectedFile!.name,
         'createdAt': FieldValue.serverTimestamp(),
         'status': 'pending',
-      });
+      };
 
-      print('[JustificationPage] Justification document created');
+      print('[JustificationPage]   Document data: $justificationData');
 
-      // Update absence status to submitted
+      final justificationRef = await _firestore
+          .collection('justifications')
+          .add(justificationData);
+      print('[JustificationPage] ✓ Justification document created');
+      print('[JustificationPage]   Document ID: ${justificationRef.id}');
+
+      // ========== STEP 6: UPDATE ABSENCE STATUS IN FIRESTORE ==========
+      print(
+        '[JustificationPage] Step 5: Updating absence status to "justified"...',
+      );
+
+      final absenceUpdateData = {
+        'status': 'justified',
+        'justificationSubmittedAt': FieldValue.serverTimestamp(),
+        'justificationId':
+            justificationRef.id, // Link to justification document
+      };
+
+      print('[JustificationPage]   Update data: $absenceUpdateData');
+
       await _firestore
           .collection('absences')
           .doc(widget.absence.id)
-          .update({
-            'status': 'justified',
-            'justificationSubmittedAt': FieldValue.serverTimestamp(),
-          });
+          .update(absenceUpdateData);
 
-      print('[JustificationPage] Absence status updated to justified');
+      print('[JustificationPage] ✓ Absence status updated to "justified"');
+
+      // ========== STEP 7: SUCCESS ==========
+      print(
+        '[JustificationPage] ✅ JUSTIFICATION SUBMISSION COMPLETED SUCCESSFULLY',
+      );
+      print('[JustificationPage] ========== END OF SUBMISSION ==========\n');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Justification submitted successfully!'),
+            content: Text('✓ Justification submitted successfully!'),
             duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF12B76A),
           ),
         );
 
@@ -189,11 +340,27 @@ class _JustificationPageState extends State<JustificationPage> {
         }
       }
     } catch (e) {
-      print('[JustificationPage] Error submitting justification: $e');
+      print('[JustificationPage] ❌ ERROR DURING SUBMISSION: $e');
+      print('[JustificationPage] ========== SUBMISSION FAILED ==========\n');
+
       if (mounted) {
         setState(() => _isSubmitting = false);
+
+        String errorMessage = 'An error occurred';
+        if (e.toString().contains('object-not-found')) {
+          errorMessage = 'File upload failed. Please try again.';
+        } else if (e.toString().contains('permission-denied')) {
+          errorMessage = 'You do not have permission to submit.';
+        } else if (e.toString().contains('not authenticated')) {
+          errorMessage = 'Please log in again.';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error: $errorMessage'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: const Color(0xFFD92D20),
+          ),
         );
       }
     }
@@ -298,7 +465,10 @@ class _JustificationPageState extends State<JustificationPage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFECEB),
                   borderRadius: BorderRadius.circular(16),
@@ -317,8 +487,11 @@ class _JustificationPageState extends State<JustificationPage> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.calendar_today_outlined,
-                  size: 16, color: Color(0xFF667085)),
+              const Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: Color(0xFF667085),
+              ),
               const SizedBox(width: 8),
               Text(
                 _formatDate(widget.absence.createdAt),
@@ -333,8 +506,11 @@ class _JustificationPageState extends State<JustificationPage> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.class_outlined,
-                  size: 16, color: Color(0xFF667085)),
+              const Icon(
+                Icons.class_outlined,
+                size: 16,
+                color: Color(0xFF667085),
+              ),
               const SizedBox(width: 8),
               Text(
                 'Absence Type: ${widget.absence.courseCode}',
@@ -349,8 +525,11 @@ class _JustificationPageState extends State<JustificationPage> {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.timer_outlined,
-                  size: 16, color: Color(0xFF667085)),
+              const Icon(
+                Icons.timer_outlined,
+                size: 16,
+                color: Color(0xFF667085),
+              ),
               const SizedBox(width: 8),
               Text(
                 'Duration: 2 Hours',
@@ -398,9 +577,7 @@ class _JustificationPageState extends State<JustificationPage> {
               onTap: () => setState(() => _selectedReason = reason),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFEEE5FF)
-                      : Colors.white,
+                  color: isSelected ? const Color(0xFFEEE5FF) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected
@@ -459,11 +636,9 @@ class _JustificationPageState extends State<JustificationPage> {
           minLines: 4,
           maxLines: 6,
           decoration: InputDecoration(
-            hintText: 'Please describe the circumstances regarding your absence...',
-            hintStyle: const TextStyle(
-              color: Color(0xFFC0C5D0),
-              fontSize: 14,
-            ),
+            hintText:
+                'Please describe the circumstances regarding your absence...',
+            hintStyle: const TextStyle(color: Color(0xFFC0C5D0), fontSize: 14),
             filled: true,
             fillColor: const Color(0xFFF0F2F5),
             border: OutlineInputBorder(
@@ -476,10 +651,7 @@ class _JustificationPageState extends State<JustificationPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFF5A4CF0),
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Color(0xFF5A4CF0), width: 2),
             ),
             contentPadding: const EdgeInsets.all(12),
           ),
@@ -635,8 +807,18 @@ class _JustificationPageState extends State<JustificationPage> {
 
   String _formatDate(DateTime date) {
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }

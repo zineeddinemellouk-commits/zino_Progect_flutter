@@ -74,7 +74,10 @@ class StudentsFirestoreService {
 
   Stream<List<AbsenceFeatureModel>> watchAbsencesByStudent(String studentId) {
     final normalizedStudentId = studentId.trim();
+    print('[DEBUG] watchAbsencesByStudent called with: rawId="$studentId", normalized="$normalizedStudentId", length=${normalizedStudentId.length}');
+    
     if (normalizedStudentId.isEmpty) {
+      print('[DEBUG] studentId is empty, returning empty stream');
       return Stream.value(const <AbsenceFeatureModel>[]);
     }
 
@@ -82,16 +85,41 @@ class StudentsFirestoreService {
         .where('studentId', isEqualTo: normalizedStudentId)
         .snapshots()
         .asyncMap((snapshot) async {
+          print('[StudentsFirestoreService] watchAbsencesByStudent: studentId=$normalizedStudentId, docCount=${snapshot.docs.length}');
+          
+          if (snapshot.docs.isEmpty) {
+            print('[DEBUG] ⚠️ NO DOCUMENTS FOUND for studentId=$normalizedStudentId');
+            print('[DEBUG] Attempting to fetch ALL absences to check if they exist...');
+            try {
+              final allAbsences = await _absences.get();
+              print('[DEBUG] Total absences in collection: ${allAbsences.docs.length}');
+              for (final doc in allAbsences.docs.take(5)) {
+                final docStudentId = doc.data()['studentId'] ?? 'null';
+                print('[DEBUG]   Doc: ${doc.id}, studentId="$docStudentId" (matches=${"$docStudentId" == normalizedStudentId})');
+              }
+            } catch (e) {
+              print('[DEBUG] Error fetching all absences: $e');
+            }
+          }
+          
           final items = snapshot.docs
               .map((doc) => AbsenceFeatureModel.fromMap(doc.id, doc.data()))
               .toList();
           items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          for (final item in items) {
+            print('[StudentsFirestoreService] Absence: id=${item.id}, subject=${item.subjectName}, status=${item.status}, deadline=${item.deadlineAt}');
+          }
 
           final expired = items.where(
             (e) =>
                 e.status == AbsenceStatus.pending &&
                 DateTime.now().isAfter(e.deadlineAt),
           );
+
+          if (expired.isNotEmpty) {
+            print('[StudentsFirestoreService] Found ${expired.length} expired absence(s), marking as rejected');
+          }
 
           for (final item in expired) {
             await rejectAbsence(absenceId: item.id, studentId: item.studentId);
@@ -115,6 +143,34 @@ class StudentsFirestoreService {
           await _syncStudentAbsenceCounters(normalizedStudentId, items);
           return items;
         });
+  }
+
+  /// DEBUG METHOD: Fetch all absences without filter to diagnose issues
+  Future<void> debugPrintAllAbsences() async {
+    try {
+      print('[DEBUG] ===== FIRESTORE ABSENCES COLLECTION DEBUG =====');
+      final snapshot = await _absences.get();
+      print('[DEBUG] Total absence documents: ${snapshot.docs.length}');
+      
+      // Print first 10 documents
+      for (int i = 0; i < snapshot.docs.length && i < 10; i++) {
+        final doc = snapshot.docs[i];
+        final data = doc.data();
+        print('[DEBUG] Document $i: id=${doc.id}');
+        print('[DEBUG]   studentId: "${data['studentId']}"');
+        print('[DEBUG]   teacherName: "${data['teacherName']}"');
+        print('[DEBUG]   subjectName: "${data['subjectName']}"');
+        print('[DEBUG]   status: "${data['status']}"');
+        print('[DEBUG]   createdAt: ${data['createdAt']}');
+      }
+      
+      if (snapshot.docs.isEmpty) {
+        print('[DEBUG] ⚠️ NO ABSENCES FOUND IN FIRESTORE');
+      }
+      print('[DEBUG] ===== END DEBUG =====');
+    } catch (e) {
+      print('[DEBUG] ERROR fetching absences: $e');
+    }
   }
 
   Future<void> _syncStudentAbsenceCounters(
@@ -183,6 +239,7 @@ class StudentsFirestoreService {
     required String groupId,
     required String classId,
     required int attendancePercentage,
+    String? authUid,
   }) async {
     final doc = _students.doc();
     await doc.set({
@@ -191,6 +248,7 @@ class StudentsFirestoreService {
       'levelId': levelId.trim(),
       'groupId': groupId.trim(),
       'classId': classId.trim(),
+      'authUid': authUid,  // ← Store Firebase Auth UID here!
       'subjectIds': const <String>[],
       'createdAt': FieldValue.serverTimestamp(),
       'totalPresence': 0,
@@ -503,6 +561,24 @@ class StudentsFirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     });
+
+    // Create expiration notification after transaction completes
+    try {
+      final absenceData = (await absenceRef.get()).data() ?? const <String, dynamic>{};
+      final subjectName = (absenceData['subjectName'] as String?)?.trim() ?? 'An absence';
+      
+      await _notifications.doc().set({
+        'studentId': studentId,
+        'type': 'absenceexpired',
+        'title': 'Absence Justification Expired',
+        'message': 'You can no longer justify your absence in $subjectName',
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'relatedAbsenceId': absenceId,
+      });
+    } catch (_) {
+      // Silently skip notification creation errors
+    }
   }
 
   double _calcAttendanceRate(int totalPresence, int totalAbsence) {

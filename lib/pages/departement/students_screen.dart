@@ -23,152 +23,9 @@ class StudentsScreen extends StatelessWidget {
     StudentsScreenArgs args,
     dynamic student,
   ) async {
-    final formKey = GlobalKey<FormState>();
-    final fullNameController = TextEditingController(text: student.fullName);
-    final emailController = TextEditingController(text: student.email);
-    final attendanceController = TextEditingController(
-      text: student.attendancePercentage.toString(),
-    );
-    var isSaving = false;
-
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (_, setDialogState) {
-            return AlertDialog(
-              title: const Text('Edit student'),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: fullNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full name',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Full name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          final trimmed = value?.trim() ?? '';
-                          if (trimmed.isEmpty) return 'Email is required';
-                          if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(trimmed)) {
-                            return 'Enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: attendanceController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Attendance %',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          final parsed = int.tryParse(value?.trim() ?? '');
-                          if (parsed == null) return 'Attendance must be a number';
-                          if (parsed < 0 || parsed > 100) {
-                            return 'Attendance must be between 0 and 100';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (formKey.currentState?.validate() != true) {
-                            return;
-                          }
-
-                          setDialogState(() => isSaving = true);
-                          try {
-                            await context
-                                .read<StudentManagementProvider>()
-                                .updateStudent(
-                                  id: student.id,
-                                  fullName: fullNameController.text,
-                                  email: emailController.text,
-                                  attendancePercentage: int.parse(
-                                    attendanceController.text.trim(),
-                                  ),
-                                  groupId: args.group.id,
-                                  classId: student.classId,
-                                  subjectIds: List<String>.from(student.subjectIds),
-                                  levelId: args.level.id,
-                                );
-
-                            if (!context.mounted) return;
-                            Navigator.of(dialogContext).pop();
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Student updated successfully.'),
-                                  ),
-                                );
-                              }
-                            });
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            Navigator.of(dialogContext).pop();
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to update student: $e'),
-                                  ),
-                                );
-                              }
-                            });
-                          } finally {
-                            if (dialogContext.mounted) {
-                              setDialogState(() => isSaving = false);
-                            }
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _EditStudentDialog(student: student, args: args),
     );
   }
 
@@ -219,207 +76,9 @@ class StudentsScreen extends StatelessWidget {
     BuildContext context,
     StudentsScreenArgs args,
   ) async {
-    final formKey = GlobalKey<FormState>();
-    final fullNameController = TextEditingController();
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    final attendanceController = TextEditingController(text: '0');
-    var isSaving = false;
-
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (_, setDialogState) {
-            return AlertDialog(
-              title: const Text('Add new student'),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: fullNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full name',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Full name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          final trimmed = value?.trim() ?? '';
-                          if (trimmed.isEmpty) {
-                            return 'Email is required';
-                          }
-                          if (!RegExp(
-                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                          ).hasMatch(trimmed)) {
-                            return 'Enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Password is required';
-                          }
-                          if (value.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: confirmPasswordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please confirm the password';
-                          }
-                          if (value != passwordController.text) {
-                            return 'Passwords do not match';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: attendanceController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Attendance %',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          final parsed = int.tryParse(value?.trim() ?? '');
-                          if (parsed == null) {
-                            return 'Attendance must be a number';
-                          }
-                          if (parsed < 0 || parsed > 100) {
-                            return 'Attendance must be between 0 and 100';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (formKey.currentState?.validate() != true) {
-                            return;
-                          }
-
-                          if (passwordController.text !=
-                              confirmPasswordController.text) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Passwords do not match.'),
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => isSaving = true);
-
-                          try {
-                            await context
-                                .read<StudentManagementProvider>()
-                                .addStudent(
-                                  fullName: fullNameController.text,
-                                  email: emailController.text,
-                                  password: passwordController.text,
-                                  attendancePercentage: int.parse(
-                                    attendanceController.text.trim(),
-                                  ),
-                                  groupId: args.group.id,
-                                  levelId: args.level.id,
-                                );
-
-                            if (context.mounted) {
-                              Navigator.of(dialogContext).pop();
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Student added successfully.'),
-                                    ),
-                                  );
-                                }
-                              });
-                            }
-                          } catch (_) {
-                            if (context.mounted) {
-                              Navigator.of(dialogContext).pop();
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Failed to add student. Please check network and try again.',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              });
-                            }
-                          } finally {
-                            if (dialogContext.mounted) {
-                              setDialogState(() => isSaving = false);
-                            }
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _AddStudentDialog(args: args),
     );
   }
 
@@ -531,5 +190,360 @@ class StudentsScreen extends StatelessWidget {
       ),
       bottomNavigationBar: departmentBottomNav(context, 1),
     );
+  }
+}
+
+class _EditStudentDialog extends StatefulWidget {
+  const _EditStudentDialog({required this.student, required this.args});
+
+  final dynamic student;
+  final StudentsScreenArgs args;
+
+  @override
+  State<_EditStudentDialog> createState() => _EditStudentDialogState();
+}
+
+class _EditStudentDialogState extends State<_EditStudentDialog> {
+  late final GlobalKey<FormState> _formKey;
+  late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _attendanceController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _formKey = GlobalKey<FormState>();
+    _nameController = TextEditingController(text: widget.student.fullName);
+    _emailController = TextEditingController(text: widget.student.email);
+    _attendanceController = TextEditingController(
+      text: widget.student.attendancePercentage.toString(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _attendanceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Student'),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final email = (value ?? '').trim();
+                    if (email.isEmpty) return 'Email is required';
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(email)) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _attendanceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Attendance %',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null) return 'Attendance must be a number';
+                    if (parsed < 0 || parsed > 100) {
+                      return 'Attendance must be between 0 and 100';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _handleSave,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSave() async {
+    if (_formKey.currentState?.validate() != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<StudentManagementProvider>().updateStudent(
+            id: widget.student.id,
+            fullName: _nameController.text,
+            email: _emailController.text,
+            attendancePercentage: int.parse(
+              _attendanceController.text.trim(),
+            ),
+            groupId: widget.args.group.id,
+            classId: widget.student.classId,
+            subjectIds: List<String>.from(widget.student.subjectIds),
+            levelId: widget.args.level.id,
+          );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Student updated successfully.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update student: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+}
+
+class _AddStudentDialog extends StatefulWidget {
+  const _AddStudentDialog({required this.args});
+
+  final StudentsScreenArgs args;
+
+  @override
+  State<_AddStudentDialog> createState() => _AddStudentDialogState();
+}
+
+class _AddStudentDialogState extends State<_AddStudentDialog> {
+  late final GlobalKey<FormState> _formKey;
+  late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late final TextEditingController _passwordController;
+  late final TextEditingController _confirmPasswordController;
+  late final TextEditingController _attendanceController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _formKey = GlobalKey<FormState>();
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
+    _attendanceController = TextEditingController(text: '0');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _attendanceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add New Student'),
+      content: SizedBox(
+        width: 460,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final email = (value ?? '').trim();
+                    if (email.isEmpty) return 'Email is required';
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(email)) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Password is required';
+                    }
+                    if (value.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _confirmPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm the password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _attendanceController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Attendance %',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final parsed = int.tryParse(value?.trim() ?? '');
+                    if (parsed == null) return 'Attendance must be a number';
+                    if (parsed < 0 || parsed > 100) {
+                      return 'Attendance must be between 0 and 100';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _handleSave,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSave() async {
+    if (_formKey.currentState?.validate() != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await context.read<StudentManagementProvider>().addStudent(
+            fullName: _nameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+            attendancePercentage: int.parse(
+              _attendanceController.text.trim(),
+            ),
+            groupId: widget.args.group.id,
+            levelId: widget.args.level.id,
+          );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Student added successfully.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add student: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 }

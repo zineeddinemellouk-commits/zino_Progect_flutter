@@ -392,11 +392,17 @@ class TeachersFirestoreService {
 
     final presentStudentIds = <String>[];
     final absentStudentIds = <String>[];
+    // Track absence IDs for notification linking
+    final absenceIdByStudentId = <String, String>{};
 
     for (final doc in studentDocs) {
-      final studentId = doc.id;
-      final present = isPresentByStudentId[studentId] ?? true;
+      final studentDocId = doc.id;
       final data = doc.data();
+      
+      // ✅ FIX: Use authUid from student document (Firebase Auth UID), not document ID
+      final authUid = (data['authUid'] as String?) ?? studentDocId;
+      
+      final present = isPresentByStudentId[studentDocId] ?? true;
 
       final totalPresence = (data['totalPresence'] as num?)?.toInt() ?? 0;
       final totalAbsence = (data['totalAbsence'] as num?)?.toInt() ?? 0;
@@ -406,7 +412,7 @@ class TeachersFirestoreService {
       final nextAbsence = present ? totalAbsence : totalAbsence + 1;
       final nextPendingAbsence = present ? pendingAbsence : pendingAbsence + 1;
 
-      final studentRef = _students.doc(studentId);
+      final studentRef = _students.doc(studentDocId);
       batch.update(studentRef, {
         'totalPresence': nextPresence,
         'totalAbsence': nextAbsence,
@@ -416,12 +422,13 @@ class TeachersFirestoreService {
       });
 
       if (present) {
-        presentStudentIds.add(studentId);
+        presentStudentIds.add(studentDocId);
       } else {
-        absentStudentIds.add(studentId);
+        absentStudentIds.add(studentDocId);
         final absenceRef = _absences.doc();
+        absenceIdByStudentId[studentDocId] = absenceRef.id;
         batch.set(absenceRef, {
-          'studentId': studentId,
+          'studentId': authUid,  // ✅ FIX: Use authUid (Firebase Auth UID) instead of document ID
           'teacherId': normalizedTeacherId,
           'teacherName': teacherName,
           'subjectId': resolvedSubjectId,
@@ -462,9 +469,13 @@ class TeachersFirestoreService {
 
     await batch.commit();
 
-    // Create notifications for absent students
+    // Create notifications for absent students with relatedAbsenceId link
+    print('[TeachersFirestoreService] Creating ${absentStudentIds.length} notifications for absent students');
     for (final studentId in absentStudentIds) {
       try {
+        final absenceId = absenceIdByStudentId[studentId];
+        print('[TeachersFirestoreService] Creating notification for student=$studentId, absenceId=$absenceId, subject=$resolvedSubjectName');
+        
         await _notifications.doc().set({
           'studentId': studentId,
           'type': 'absencerecorded',
@@ -473,12 +484,14 @@ class TeachersFirestoreService {
               'You were marked absent in $resolvedSubjectName by $teacherName',
           'createdAt': FieldValue.serverTimestamp(),
           'isRead': false,
+          if (absenceId != null) 'relatedAbsenceId': absenceId,
         });
-      } catch (_) {
+      } catch (e) {
         // Continue with other notifications even if one fails
-        // Silently skip notification creation errors
+        print('[TeachersFirestoreService] Failed to create notification for student=$studentId: $e');
       }
     }
+    print('[TeachersFirestoreService] Attendance submitted: ${presentStudentIds.length} present, ${absentStudentIds.length} absent');
   }
 
   Future<List<SubjectModel>> _fetchSubjectsForTeacher(

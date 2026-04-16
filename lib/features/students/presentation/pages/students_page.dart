@@ -52,253 +52,9 @@ class _StudentsPageState extends State<StudentsPage> {
   }
 
   Future<void> _showStudentFormDialog({StudentFeatureModel? existing}) async {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController(
-      text: existing?.fullName ?? '',
-    );
-    final emailController = TextEditingController(text: existing?.email ?? '');
-
-    String? selectedLevelId = existing != null && existing.levelId.isNotEmpty
-        ? existing.levelId
-        : null;
-    String? selectedGroupId = existing != null && existing.groupId.isNotEmpty
-        ? existing.groupId
-        : null;
-    String? selectedClassId = existing != null && existing.classId.isNotEmpty
-        ? existing.classId
-        : null;
-
-    var isSaving = false;
-
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (_, setDialogState) {
-            return AlertDialog(
-              title: Text(existing == null ? 'Add Student' : 'Edit Student'),
-              content: SizedBox(
-                width: 420,
-                child: Form(
-                  key: formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextFormField(
-                          controller: nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if ((value ?? '').trim().isEmpty) {
-                              return 'Name is required';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            final email = (value ?? '').trim();
-                            if (email.isEmpty) return 'Email is required';
-                            if (!RegExp(
-                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                            ).hasMatch(email)) {
-                              return 'Enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        StreamBuilder<List<Map<String, String>>>(
-                          stream: _service.watchLevels(),
-                          builder: (context, snapshot) {
-                            final levels = snapshot.data ?? const [];
-                            return DropdownButtonFormField<String>(
-                              initialValue:
-                                  levels.any((l) => l['id'] == selectedLevelId)
-                                  ? selectedLevelId
-                                  : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Level',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: levels
-                                  .map(
-                                    (l) => DropdownMenuItem(
-                                      value: l['id'],
-                                      child: Text(l['name'] ?? l['id'] ?? '-'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setDialogState(() => selectedLevelId = value);
-                              },
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                  ? 'Select a level'
-                                  : null,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        StreamBuilder<List<Map<String, String>>>(
-                          stream: _service.watchGroups(),
-                          builder: (context, snapshot) {
-                            final groups = snapshot.data ?? const [];
-                            return DropdownButtonFormField<String>(
-                              initialValue:
-                                  groups.any((g) => g['id'] == selectedGroupId)
-                                  ? selectedGroupId
-                                  : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Group',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: groups
-                                  .map(
-                                    (g) => DropdownMenuItem(
-                                      value: g['id'],
-                                      child: Text(g['name'] ?? g['id'] ?? '-'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setDialogState(() => selectedGroupId = value);
-                              },
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                  ? 'Select a group'
-                                  : null,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        StreamBuilder<List<Map<String, String>>>(
-                          stream: _service.watchClasses(),
-                          builder: (context, snapshot) {
-                            final classes = snapshot.data ?? const [];
-                            return DropdownButtonFormField<String>(
-                              initialValue:
-                                  classes.any((c) => c['id'] == selectedClassId)
-                                  ? selectedClassId
-                                  : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Class',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: classes
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c['id'],
-                                      child: Text(c['name'] ?? c['id'] ?? '-'),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setDialogState(() => selectedClassId = value);
-                              },
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                  ? 'Select a class'
-                                  : null,
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving
-                      ? null
-                      : () async {
-                          if (formKey.currentState?.validate() != true) return;
-                          setDialogState(() => isSaving = true);
-                          try {
-                            if (existing == null) {
-                              await _service.addStudent(
-                                fullName: nameController.text,
-                                email: emailController.text,
-                                levelId: selectedLevelId!,
-                                groupId: selectedGroupId!,
-                                classId: selectedClassId!,
-                                attendancePercentage: 0,
-                              );
-                            } else {
-                              await _service.updateStudent(
-                                id: existing.id,
-                                fullName: nameController.text,
-                                email: emailController.text,
-                                levelId: selectedLevelId!,
-                                groupId: selectedGroupId!,
-                                classId: selectedClassId!,
-                                attendancePercentage: 0,
-                              );
-                            }
-
-                            if (context.mounted) {
-                              Navigator.of(dialogContext).pop();
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        existing == null
-                                            ? 'Student added successfully.'
-                                            : 'Student updated successfully.',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              });
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              Navigator.of(dialogContext).pop();
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Save failed: $e')),
-                                  );
-                                }
-                              });
-                            }
-                          } finally {
-                            if (dialogContext.mounted) {
-                              setDialogState(() => isSaving = false);
-                            }
-                          }
-                        },
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder: (_) => _StudentFormDialog(existing: existing, service: _service),
     );
   }
 
@@ -801,6 +557,269 @@ class _StudentsPageState extends State<StudentsPage> {
         ),
       ),
     );
+  }
+}
+
+class _StudentFormDialog extends StatefulWidget {
+  const _StudentFormDialog({
+    required this.existing,
+    required this.service,
+  });
+
+  final StudentFeatureModel? existing;
+  final StudentsFirestoreService service;
+
+  @override
+  State<_StudentFormDialog> createState() => _StudentFormDialogState();
+}
+
+class _StudentFormDialogState extends State<_StudentFormDialog> {
+  late final GlobalKey<FormState> _formKey;
+  late final TextEditingController _nameController;
+  late final TextEditingController _emailController;
+  late String? _selectedLevelId;
+  late String? _selectedGroupId;
+  late String? _selectedClassId;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _formKey = GlobalKey<FormState>();
+    _nameController = TextEditingController(
+      text: widget.existing?.fullName ?? '',
+    );
+    _emailController = TextEditingController(text: widget.existing?.email ?? '');
+    _selectedLevelId = widget.existing != null && widget.existing!.levelId.isNotEmpty
+        ? widget.existing!.levelId
+        : null;
+    _selectedGroupId = widget.existing != null && widget.existing!.groupId.isNotEmpty
+        ? widget.existing!.groupId
+        : null;
+    _selectedClassId = widget.existing != null && widget.existing!.classId.isNotEmpty
+        ? widget.existing!.classId
+        : null;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(
+        widget.existing == null ? 'Add Student' : 'Edit Student',
+      ),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final email = (value ?? '').trim();
+                    if (email.isEmpty) return 'Email is required';
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(email)) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<Map<String, String>>>(
+                  stream: widget.service.watchLevels(),
+                  builder: (context, snapshot) {
+                    final levels = snapshot.data ?? const [];
+                    return DropdownButtonFormField<String>(
+                      initialValue: levels.any((l) => l['id'] == _selectedLevelId)
+                          ? _selectedLevelId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Level',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: levels
+                          .map(
+                            (l) => DropdownMenuItem(
+                              value: l['id'],
+                              child: Text(l['name'] ?? l['id'] ?? '-'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedLevelId = value);
+                      },
+                      validator: (value) =>
+                          value == null || value.isEmpty
+                          ? 'Select a level'
+                          : null,
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<Map<String, String>>>(
+                  stream: widget.service.watchGroups(),
+                  builder: (context, snapshot) {
+                    final groups = snapshot.data ?? const [];
+                    return DropdownButtonFormField<String>(
+                      initialValue:
+                          groups.any((g) => g['id'] == _selectedGroupId)
+                          ? _selectedGroupId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Group',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: groups
+                          .map(
+                            (g) => DropdownMenuItem(
+                              value: g['id'],
+                              child: Text(g['name'] ?? g['id'] ?? '-'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedGroupId = value);
+                      },
+                      validator: (value) =>
+                          value == null || value.isEmpty
+                          ? 'Select a group'
+                          : null,
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<Map<String, String>>>(
+                  stream: widget.service.watchClasses(),
+                  builder: (context, snapshot) {
+                    final classes = snapshot.data ?? const [];
+                    return DropdownButtonFormField<String>(
+                      initialValue:
+                          classes.any((c) => c['id'] == _selectedClassId)
+                          ? _selectedClassId
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Class',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: classes
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c['id'],
+                              child: Text(c['name'] ?? c['id'] ?? '-'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() => _selectedClassId = value);
+                      },
+                      validator: (value) =>
+                          value == null || value.isEmpty
+                          ? 'Select a class'
+                          : null,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _handleSave,
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _handleSave() async {
+    if (_formKey.currentState?.validate() != true) return;
+
+    setState(() => _isSaving = true);
+    try {
+      if (widget.existing == null) {
+        await widget.service.addStudent(
+          fullName: _nameController.text,
+          email: _emailController.text,
+          levelId: _selectedLevelId!,
+          groupId: _selectedGroupId!,
+          classId: _selectedClassId!,
+          attendancePercentage: 0,
+        );
+      } else {
+        await widget.service.updateStudent(
+          id: widget.existing!.id,
+          fullName: _nameController.text,
+          email: _emailController.text,
+          levelId: _selectedLevelId!,
+          groupId: _selectedGroupId!,
+          classId: _selectedClassId!,
+          attendancePercentage: 0,
+        );
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.existing == null
+                ? 'Student added successfully.'
+                : 'Student updated successfully.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Save failed: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 }
 

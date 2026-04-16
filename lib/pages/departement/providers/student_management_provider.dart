@@ -272,6 +272,47 @@ class StudentManagementProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSubject({
+    required String id,
+    required String name,
+    required String teacherId,
+    required List<String> classIds,
+  }) async {
+    try {
+      name = name.trim();
+      teacherId = teacherId.trim();
+
+      if (name.isEmpty) throw Exception('Subject name cannot be empty');
+      if (teacherId.isEmpty) throw Exception('Teacher ID cannot be empty');
+      if (classIds.isEmpty) throw Exception('Select at least one class');
+
+      if (kDebugMode) print('✅ Updating subject: $name');
+      await _firestoreService.updateSubject(
+        id: id,
+        name: name,
+        teacherId: teacherId,
+        classIds: classIds,
+      );
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error updating subject: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSubject(String subjectId) async {
+    try {
+      if (subjectId.isEmpty) throw Exception('Subject ID cannot be empty');
+
+      if (kDebugMode) print('✅ Deleting subject: $subjectId');
+      await _firestoreService.deleteSubject(subjectId);
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error deleting subject: $e');
+      rethrow;
+    }
+  }
+
   Future<void> updateJustificationStatus({
     required String id,
     required String status,

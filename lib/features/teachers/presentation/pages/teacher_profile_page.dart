@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_attendance_groups_page.dart';
 import 'package:test/services/department_auth_service.dart';
-import 'package:test/pages/login_page.dart';
+import 'package:test/main.dart'; // ✅ FIXED
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key, this.teacherId, this.teacherEmail});
@@ -26,7 +26,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
     await _authService.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()), // ✅ FIXED
       (route) => false,
     );
   }
@@ -192,9 +192,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                                 const <TeacherAttendanceHistoryItem>[];
 
                             final visibleHistory = allHistory.where((item) {
-                              if (_searchQuery.isEmpty) {
-                                return true;
-                              }
+                              if (_searchQuery.isEmpty) return true;
                               return item.groupName.toLowerCase().contains(
                                     _searchQuery,
                                   ) ||
@@ -578,7 +576,6 @@ class _AttendanceRateCard extends StatelessWidget {
                 final value = (index < bars.length) ? bars[index] : 0.0;
                 final height = (value.clamp(0, 100) / 100) * 62 + 10;
                 final isPrimary = index == 3 || index == 4;
-
                 return Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,

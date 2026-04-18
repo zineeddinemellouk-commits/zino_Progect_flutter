@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/students/presentation/pages/absence_tracker_page.dart';
-import 'package:test/pages/login_page.dart';
+import 'package:test/main.dart'; // ✅ FIXED
 import 'package:test/services/department_auth_service.dart';
 
 extension AttendanceGrading on double {
@@ -46,7 +46,7 @@ class _StudentsPageState extends State<StudentsPage> {
     await _authService.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()), // ✅ FIXED
       (route) => false,
     );
   }
@@ -130,7 +130,6 @@ class _StudentsPageState extends State<StudentsPage> {
 
           final students = snapshot.data ?? const [];
 
-          // Get first student for real-time metrics
           final firstStudent = students.isNotEmpty ? students.first : null;
 
           final avgAttendance = (firstStudent?.attendanceRate ?? 0) * 100;
@@ -140,7 +139,7 @@ class _StudentsPageState extends State<StudentsPage> {
           final avgAttendanceComment = switch (avgAttendanceGrade) {
             'Excellent' => 'Great job — keep the momentum going.',
             'Average' => 'Solid progress — there is still room to improve.',
-            _ => 'Let’s work on raising the attendance average.',
+            _ => 'Let\'s work on raising the attendance average.',
           };
           final presentCount = firstStudent?.totalPresence ?? 0;
           final absentCount = firstStudent?.totalAbsence ?? 0;
@@ -165,7 +164,7 @@ class _StudentsPageState extends State<StudentsPage> {
                   students.isEmpty
                       ? 'Hello, Student'
                       : 'Hello, ${students.first.fullName}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Color(0xFF101828),
                     fontSize: 44,
                     height: 1.02,
@@ -364,7 +363,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                  SizedBox(height: 2),
+                                  const SizedBox(height: 2),
                                   Text(
                                     avgAttendanceComment,
                                     style: const TextStyle(
@@ -561,10 +560,7 @@ class _StudentsPageState extends State<StudentsPage> {
 }
 
 class _StudentFormDialog extends StatefulWidget {
-  const _StudentFormDialog({
-    required this.existing,
-    required this.service,
-  });
+  const _StudentFormDialog({required this.existing, required this.service});
 
   final StudentFeatureModel? existing;
   final StudentsFirestoreService service;
@@ -589,14 +585,19 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
     _nameController = TextEditingController(
       text: widget.existing?.fullName ?? '',
     );
-    _emailController = TextEditingController(text: widget.existing?.email ?? '');
-    _selectedLevelId = widget.existing != null && widget.existing!.levelId.isNotEmpty
+    _emailController = TextEditingController(
+      text: widget.existing?.email ?? '',
+    );
+    _selectedLevelId =
+        widget.existing != null && widget.existing!.levelId.isNotEmpty
         ? widget.existing!.levelId
         : null;
-    _selectedGroupId = widget.existing != null && widget.existing!.groupId.isNotEmpty
+    _selectedGroupId =
+        widget.existing != null && widget.existing!.groupId.isNotEmpty
         ? widget.existing!.groupId
         : null;
-    _selectedClassId = widget.existing != null && widget.existing!.classId.isNotEmpty
+    _selectedClassId =
+        widget.existing != null && widget.existing!.classId.isNotEmpty
         ? widget.existing!.classId
         : null;
   }
@@ -611,9 +612,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-        widget.existing == null ? 'Add Student' : 'Edit Student',
-      ),
+      title: Text(widget.existing == null ? 'Add Student' : 'Edit Student'),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -660,7 +659,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                   builder: (context, snapshot) {
                     final levels = snapshot.data ?? const [];
                     return DropdownButtonFormField<String>(
-                      initialValue: levels.any((l) => l['id'] == _selectedLevelId)
+                      value: levels.any((l) => l['id'] == _selectedLevelId)
                           ? _selectedLevelId
                           : null,
                       decoration: const InputDecoration(
@@ -678,8 +677,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                       onChanged: (value) {
                         setState(() => _selectedLevelId = value);
                       },
-                      validator: (value) =>
-                          value == null || value.isEmpty
+                      validator: (value) => value == null || value.isEmpty
                           ? 'Select a level'
                           : null,
                     );
@@ -691,8 +689,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                   builder: (context, snapshot) {
                     final groups = snapshot.data ?? const [];
                     return DropdownButtonFormField<String>(
-                      initialValue:
-                          groups.any((g) => g['id'] == _selectedGroupId)
+                      value: groups.any((g) => g['id'] == _selectedGroupId)
                           ? _selectedGroupId
                           : null,
                       decoration: const InputDecoration(
@@ -710,8 +707,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                       onChanged: (value) {
                         setState(() => _selectedGroupId = value);
                       },
-                      validator: (value) =>
-                          value == null || value.isEmpty
+                      validator: (value) => value == null || value.isEmpty
                           ? 'Select a group'
                           : null,
                     );
@@ -723,8 +719,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                   builder: (context, snapshot) {
                     final classes = snapshot.data ?? const [];
                     return DropdownButtonFormField<String>(
-                      initialValue:
-                          classes.any((c) => c['id'] == _selectedClassId)
+                      value: classes.any((c) => c['id'] == _selectedClassId)
                           ? _selectedClassId
                           : null,
                       decoration: const InputDecoration(
@@ -742,8 +737,7 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
                       onChanged: (value) {
                         setState(() => _selectedClassId = value);
                       },
-                      validator: (value) =>
-                          value == null || value.isEmpty
+                      validator: (value) => value == null || value.isEmpty
                           ? 'Select a class'
                           : null,
                     );
@@ -812,9 +806,9 @@ class _StudentFormDialogState extends State<_StudentFormDialog> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Save failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

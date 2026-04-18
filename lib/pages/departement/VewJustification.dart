@@ -42,7 +42,7 @@ class VewJustification extends StatelessWidget {
                 builder: (context, snapshot) {
                   final items = snapshot.data ?? const <JustificationModel>[];
                   final pending = items
-                      .where((j) => j.status == 'pending')
+                      .where((j) => j.status == 'submitted')
                       .length;
                   return Text(
                     '$pending pending requests',
@@ -98,11 +98,11 @@ class VewJustification extends StatelessWidget {
         onApprove: () async {
           await context
               .read<StudentManagementProvider>()
-              .updateJustificationStatus(id: item.id, status: 'approved');
+              .updateJustificationStatus(id: item.id, status: 'accepted');
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Justification approved')),
+              const SnackBar(content: Text('Justification accepted')),
             );
           }
         },
@@ -111,13 +111,13 @@ class VewJustification extends StatelessWidget {
               .read<StudentManagementProvider>()
               .updateJustificationStatus(
                 id: item.id,
-                status: 'rejected',
+                status: 'refused',
                 refusalReason: reason,
               );
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Justification rejected')),
+              const SnackBar(content: Text('Justification refused')),
             );
           }
         },
@@ -143,13 +143,15 @@ class _JustificationCard extends StatelessWidget {
 
     final status = item.status.toLowerCase();
     final statusColor = switch (status) {
-      'approved' => Colors.green,
-      'rejected' => Colors.red,
+      'accepted' => Colors.green,
+      'refused' => Colors.red,
+      'submitted' => Colors.orange,
       _ => Colors.orange,
     };
     final statusLabel = switch (status) {
-      'approved' => 'APPROVED',
-      'rejected' => 'REJECTED',
+      'accepted' => 'ACCEPTED',
+      'refused' => 'REFUSED',
+      'submitted' => 'SUBMITTED',
       _ => 'PENDING',
     };
 
@@ -209,6 +211,30 @@ class _JustificationCard extends StatelessWidget {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF1A1A1A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.levelName ?? 'Unknown Level',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              item.groupName ?? 'Unknown Group',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2563EB),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -330,6 +356,32 @@ class _JustificationDetailsDialogState
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Row(
+                children: [
+                  Text(
+                    'Level: ${widget.item.levelName ?? 'Unknown Level'}',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2563EB).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      'Group: ${widget.item.groupName ?? 'Unknown Group'}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2563EB),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Text('${widget.item.subject} • ${widget.item.teacherName}'),
               const SizedBox(height: 8),
               Text(
@@ -366,7 +418,7 @@ class _JustificationDetailsDialogState
                 controller: _refusalReasonController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  labelText: 'Rejection reason (optional)',
+                  labelText: 'Refusal reason (optional)',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -379,7 +431,7 @@ class _JustificationDetailsDialogState
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Close'),
         ),
-        if (widget.item.status.toLowerCase() == 'pending') ...[
+        if (widget.item.status.toLowerCase() == 'submitted') ...[
           TextButton(
             onPressed: _isRejecting
                 ? null
@@ -392,11 +444,11 @@ class _JustificationDetailsDialogState
                       if (mounted) setState(() => _isRejecting = false);
                     }
                   },
-            child: const Text('Reject'),
+            child: const Text('Refuse'),
           ),
           ElevatedButton(
             onPressed: _isRejecting ? null : widget.onApprove,
-            child: const Text('Approve'),
+            child: const Text('Accept'),
           ),
         ],
       ],

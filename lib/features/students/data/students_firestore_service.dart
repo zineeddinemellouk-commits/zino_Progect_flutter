@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/features/students/models/notification_feature_model.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StudentsFirestoreService {
   StudentsFirestoreService({FirebaseFirestore? firestore})
@@ -413,16 +413,28 @@ class StudentsFirestoreService {
     }
 
     final storagePath =
-        'justifications/$studentId/$absenceId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-    final storageRef = FirebaseStorage.instance.ref(storagePath);
-    final metadata = SettableMetadata(
-      contentType: _resolveContentType(fileType, fileName),
-    );
-
+        '$studentId/$absenceId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    
     String? uploadedFileUrl;
     try {
-      final uploadTask = await storageRef.putData(fileBytes, metadata);
-      uploadedFileUrl = await uploadTask.ref.getDownloadURL();
+      final supabase = Supabase.instance.client;
+      final bucketName = 'justifications';
+      
+      // Upload file bytes to Supabase Storage
+      final response = await supabase.storage
+          .from(bucketName)
+          .uploadBinary(storagePath, fileBytes, fileOptions: FileOptions(
+            contentType: _resolveContentType(fileType, fileName),
+          ));
+
+      if (response.isEmpty) {
+        throw Exception('Upload failed: empty response');
+      }
+
+      // Get public URL
+      uploadedFileUrl = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(storagePath);
 
       await _firestore.runTransaction((tx) async {
         final refreshedAbsence = await tx.get(absenceRef);
@@ -490,7 +502,8 @@ class StudentsFirestoreService {
     } catch (e) {
       if (uploadedFileUrl != null) {
         try {
-          await storageRef.delete();
+          final supabase = Supabase.instance.client;
+          await supabase.storage.from('justifications').remove([storagePath]);
         } catch (_) {
           // Ignore cleanup failures.
         }

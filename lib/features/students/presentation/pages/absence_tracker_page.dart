@@ -277,7 +277,7 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                       absence: absence,
                       service: _service,
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -483,6 +483,23 @@ class _AbsenceCardState extends State<_AbsenceCard>
 
   bool get _isJustified => widget.absence.status == AbsenceStatus.justified;
 
+  Future<String?> _fetchJustificationStatus() async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final query = await firestore
+          .collection('justifications')
+          .where('absenceId', isEqualTo: widget.absence.id)
+          .limit(1)
+          .get();
+      
+      if (query.docs.isEmpty) return null;
+      return query.docs.first.data()['status'] as String?;
+    } catch (e) {
+      print('[AbsenceCard] Error fetching justification: $e');
+      return null;
+    }
+  }
+
   Color get _borderColor {
     if (_isExpired) return const Color(0xFF98A2B3);
     if (_isJustified) return const Color(0xFF12B76A);
@@ -603,20 +620,43 @@ class _AbsenceCardState extends State<_AbsenceCard>
           ),
           const SizedBox(height: 10),
           // Status badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _statusColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              _statusLabel,
-              style: TextStyle(
-                color: _statusColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          FutureBuilder<String?>(
+            future: _fetchJustificationStatus(),
+            builder: (context, snapshot) {
+              String displayLabel = _statusLabel;
+              Color statusColor = _statusColor;
+              
+              // If justified, show the actual justification status
+              if (_isJustified && snapshot.hasData && snapshot.data != null) {
+                final justStatus = snapshot.data!.toLowerCase();
+                if (justStatus == 'accepted') {
+                  displayLabel = 'ACCEPTED';
+                  statusColor = const Color(0xFF12B76A);
+                } else if (justStatus == 'refused') {
+                  displayLabel = 'REFUSED';
+                  statusColor = const Color(0xFFD92D20);
+                } else if (justStatus == 'submitted') {
+                  displayLabel = 'SUBMITTED';
+                  statusColor = const Color(0xFFF59E0B);
+                }
+              }
+              
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  displayLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           // Timer section

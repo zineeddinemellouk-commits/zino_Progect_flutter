@@ -18,10 +18,18 @@ import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
 import 'package:test/pages/role_home_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: 'https://ybpmzffutavfwcbfkjcq.supabase.co', // ← PASTE YOUR URL HERE
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicG16ZmZ1dGF2ZndjYmZramNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTYyMTMsImV4cCI6MjA5MjA5MjIxM30.7wB2kJww59dpgU751hzIyGE4R0SPPwatcH6Hx34fflU', // ← PASTE YOUR ANON KEY HERE
+  );
+  
   runApp(const MyApp());
 }
 

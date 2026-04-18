@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:test/pages/department_dashboard.dart';
+import 'package:test/main.dart'; // ✅ added
 import 'AddStudent.dart';
 import 'AddTeacher.dart';
 import 'AddSubject.dart';
@@ -7,22 +8,23 @@ import 'VewJustification.dart';
 import 'ViewStudent.dart';
 import 'ViewTeachers.dart';
 import 'ViewSubjects.dart';
-import 'package:test/pages/login_page.dart';
+// ✅ removed: import 'package:test/pages/login_page.dart';
 import 'package:test/services/department_auth_service.dart';
+import 'package:test/pages/department_settings_page.dart';
 
 Future<void> _logoutFromDepartment(BuildContext context) async {
   try {
     await DepartmentAuthService().signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()), // ✅ fixed
       (_) => false,
     );
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logout failed: $e')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
   }
 }
 
@@ -37,11 +39,7 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
           end: Alignment.bottomRight,
         ),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
         ],
       ),
       child: AppBar(
@@ -132,10 +130,7 @@ Drawer departmentDrawer(BuildContext context) {
                 SizedBox(height: 8),
                 Text(
                   'Department Portal',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
@@ -144,7 +139,9 @@ Drawer departmentDrawer(BuildContext context) {
             Navigator.pop(context);
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const DepartmentDashboard()),
+              MaterialPageRoute(
+                builder: (context) => const DepartmentDashboard(),
+              ),
             );
           }),
           _drawerItem(context, Icons.person_add, "Add Student", () {
@@ -204,7 +201,12 @@ Drawer departmentDrawer(BuildContext context) {
   );
 }
 
-Widget _drawerItem(BuildContext context, IconData icon, String text, VoidCallback onTap) {
+Widget _drawerItem(
+  BuildContext context,
+  IconData icon,
+  String text,
+  VoidCallback onTap,
+) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     child: ListTile(
@@ -217,9 +219,7 @@ Widget _drawerItem(BuildContext context, IconData icon, String text, VoidCallbac
         ),
       ),
       onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       tileColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
@@ -229,15 +229,9 @@ Widget _drawerItem(BuildContext context, IconData icon, String text, VoidCallbac
 Widget departmentBottomNav(BuildContext context, int currentIndex) {
   return Container(
     decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Color(0xFF004AC6), Color(0xFF2563EB)],
-      ),
+      gradient: LinearGradient(colors: [Color(0xFF004AC6), Color(0xFF2563EB)]),
       boxShadow: [
-        BoxShadow(
-          color: Colors.black12,
-          blurRadius: 8,
-          offset: Offset(0, -2),
-        ),
+        BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2)),
       ],
     ),
     child: BottomNavigationBar(
@@ -248,28 +242,42 @@ Widget departmentBottomNav(BuildContext context, int currentIndex) {
       unselectedItemColor: Colors.white70,
       type: BottomNavigationBarType.fixed,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Dashboard"),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard),
+          label: "Dashboard",
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.school), label: "Classes"),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment), label: "Requests"),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment),
+          label: "Requests",
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
       ],
       onTap: (index) {
         switch (index) {
           case 0:
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const DepartmentDashboard()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DepartmentDashboard(),
+              ),
+            );
             break;
           case 1:
             Navigator.pushReplacementNamed(context, ViewStudent.routeName);
             break;
           case 2:
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const VewJustification()));
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const VewJustification()),
+            );
             break;
           case 3:
-            // settings stub
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Settings not implemented yet')),
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DepartmentSettingsPage(),
+              ),
             );
             break;
         }

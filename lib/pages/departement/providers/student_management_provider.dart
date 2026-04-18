@@ -378,26 +378,6 @@ class StudentManagementProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateSubject({
-    required String id,
-    required String name,
-    required String teacherId,
-    required List<String> classIds,
-  }) async {
-    await _firestoreService.updateSubject(
-      id: id,
-      name: name.trim(),
-      teacherId: teacherId.trim(),
-      classIds: classIds,
-    );
-    notifyListeners();
-  }
-
-  Future<void> deleteSubject(String id) async {
-    await _firestoreService.deleteSubject(id);
-    notifyListeners();
-  }
-
   Future<void> logout() async {
     await _authService.signOut();
   }

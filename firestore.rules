@@ -1,0 +1,232 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    // Get the authenticated user ID
+    function currentUserId() {
+      return request.auth.uid;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Get the current user's role from user_profile
+    function getUserRole() {
+      return get(/databases/$(database)/documents/user_profile/$(currentUserId())).data.role;
+    }
+
+    // Get the current user's profile document
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/user_profile/$(currentUserId())).data;
+    }
+
+    // Check if user has a specific role
+    function hasRole(role) {
+      return getUserRole() == role;
+    }
+
+    // Check if user has one of several roles
+    function hasAnyRole(roles) {
+      return getUserRole() in roles;
+    }
+
+    // ============================================================
+    // USER_PROFILE COLLECTION - CRITICAL: ROLE IS STORED HERE
+    // ============================================================
+    match /user_profile/{userId} {
+      // Users can only read their own profile
+      allow read: if isAuthenticated() && currentUserId() == userId;
+
+      // Users can only update their own profile (limited fields)
+      allow update: if isAuthenticated() && currentUserId() == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid']);
+
+      // Only department accounts can create new profiles (for first-time setup)
+      allow create: if isAuthenticated() && (
+        currentUserId() == userId &&  // Creating your own profile
+        request.resource.data.role in ['student', 'teacher', 'department']
+      );
+
+      // Delete is not allowed - accounts must be deleted by admin
+      allow delete: if false;
+
+      // Deny all other operations
+      allow write, delete: if false;
+    }
+
+    // ============================================================
+    // STUDENTS COLLECTION - ROLE RESTRICTED
+    // ============================================================
+    match /student/{studentId} {
+      // Students can read their own document
+      allow read: if isAuthenticated() && hasRole('student') && currentUserId() == studentId;
+
+      // Teachers can read student documents
+      allow read: if isAuthenticated() && hasRole('teacher');
+
+      // Department can read all student documents
+      allow read: if isAuthenticated() && hasRole('department');
+
+      // Students can update their own document
+      allow update: if isAuthenticated() && hasRole('student') && currentUserId() == studentId;
+
+      // Teachers cannot create or delete student documents
+      // Department can create for migration purposes
+      allow create: if isAuthenticated() && hasRole('department');
+
+      // Only department can delete
+      allow delete: if isAuthenticated() && hasRole('department');
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // TEACHERS COLLECTION - ROLE RESTRICTED
+    // ============================================================
+    match /teacher/{teacherId} {
+      // Teachers can read their own document
+      allow read: if isAuthenticated() && hasRole('teacher') && currentUserId() == teacherId;
+
+      // Department can read all teacher documents
+      allow read: if isAuthenticated() && hasRole('department');
+
+      // Students cannot read teacher documents
+      allow read: if false;
+
+      // Teachers can update their own document
+      allow update: if isAuthenticated() && hasRole('teacher') && currentUserId() == teacherId;
+
+      // Only department can create teacher documents
+      allow create: if isAuthenticated() && hasRole('department');
+
+      // Only department can delete
+      allow delete: if isAuthenticated() && hasRole('department');
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // DEPARTMENT COLLECTION - ROLE RESTRICTED
+    // ============================================================
+    match /department/{departmentId} {
+      // Department users can read their own document
+      allow read: if isAuthenticated() && hasRole('department') && currentUserId() == departmentId;
+
+      // Students and teachers cannot access department documents
+      allow read: if false;
+
+      // Department users can update their own document
+      allow update: if isAuthenticated() && hasRole('department') && currentUserId() == departmentId;
+
+      // Department account creation (migration from login)
+      allow create: if isAuthenticated() && hasRole('department') && currentUserId() == departmentId;
+
+      // Only the department admin can delete their own account
+      allow delete: if isAuthenticated() && hasRole('department') && currentUserId() == departmentId;
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // ABSENCES COLLECTION - SHARED BETWEEN STUDENT AND TEACHER
+    // ============================================================
+    match /absences/{absenceId} {
+      // Students can read their own absences
+      allow read: if isAuthenticated() && hasRole('student')
+        && resource.data.studentId == currentUserId();
+
+      // Teachers can read absences of their students (optional - depends on your design)
+      allow read: if isAuthenticated() && hasRole('teacher');
+
+      // Department can read all absences
+      allow read: if isAuthenticated() && hasRole('department');
+
+      // Teachers create absence documents
+      allow create: if isAuthenticated() && hasRole('teacher');
+
+      // Teachers (who created) and students can update
+      allow update: if isAuthenticated() && (
+        (hasRole('teacher') && resource.data.teacherId == currentUserId()) ||
+        (hasRole('student') && resource.data.studentId == currentUserId())
+      );
+
+      // Only department can delete
+      allow delete: if isAuthenticated() && hasRole('department');
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // NOTIFICATIONS COLLECTION - USER-SPECIFIC
+    // ============================================================
+    match /notifications/{notificationId} {
+      // Users can read notifications intended for them
+      allow read: if isAuthenticated() && resource.data.studentId == currentUserId();
+
+      // System can create notifications
+      allow create: if isAuthenticated();
+
+      // Users can update read status of their own notifications
+      allow update: if isAuthenticated() && resource.data.studentId == currentUserId()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['studentId', 'type', 'createdAt']);
+
+      // Only department can delete
+      allow delete: if isAuthenticated() && hasRole('department');
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // ATTENDANCE COLLECTION - SHARED ACROSS ROLES
+    // ============================================================
+    match /attendance/{attendanceId} {
+      // Teachers can read/write their own attendance records
+      allow read, write: if isAuthenticated() && hasRole('teacher');
+
+      // Department can read all attendance records
+      allow read: if isAuthenticated() && hasRole('department');
+
+      // Students can read attendance (optional)
+      allow read: if isAuthenticated() && hasRole('student');
+
+      // Only department can delete
+      allow delete: if isAuthenticated() && hasRole('department');
+
+      // Deny all other operations
+      allow write: if false;
+    }
+
+    // ============================================================
+    // LOGGING & AUDIT - APPEND-ONLY
+    // ============================================================
+    match /audit_logs/{logId} {
+      // Only department can read audit logs
+      allow read: if isAuthenticated() && hasRole('department');
+
+      // Any authenticated user can create audit logs (append-only)
+      allow create: if isAuthenticated();
+
+      // No updates or deletes to audit logs
+      allow update, delete: if false;
+    }
+
+    // ============================================================
+    // CATCH-ALL - DENY EVERYTHING ELSE
+    // ============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

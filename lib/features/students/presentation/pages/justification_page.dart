@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
@@ -46,42 +47,20 @@ class _JustificationPageState extends State<JustificationPage> {
   Future<void> _pickFile() async {
     try {
       print('[JustificationPage] Starting file picker...');
+      print('[JustificationPage] Platform: ${kIsWeb ? 'WEB' : 'NATIVE'}');
+      
+      // On web, we need withData: true to get bytes; on native, withData: false to get path
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        withData: false, // Get file path instead of bytes
+        withData: kIsWeb, // true on web, false on native
       );
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
         print(
-          '[JustificationPage] File picked - Name: ${file.name}, Path: ${file.path}, Size: ${file.size}',
+          '[JustificationPage] File picked - Name: ${file.name}, Size: ${file.size}',
         );
-
-        // Validate file exists
-        if (file.path == null || file.path!.isEmpty) {
-          print('[JustificationPage] ERROR: File path is null or empty');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Error: Invalid file path')),
-            );
-          }
-          return;
-        }
-
-        // Validate file actually exists
-        final fileExists = await File(file.path!).exists();
-        if (!fileExists) {
-          print(
-            '[JustificationPage] ERROR: File does not exist at path: ${file.path}',
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Error: File not found')),
-            );
-          }
-          return;
-        }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
@@ -96,9 +75,52 @@ class _JustificationPageState extends State<JustificationPage> {
           return;
         }
 
+        // On web, validate bytes are available; on native, validate path exists
+        if (kIsWeb) {
+          if (file.bytes == null || file.bytes!.isEmpty) {
+            print('[JustificationPage] ERROR: File bytes are null or empty');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Error: Invalid file data')),
+              );
+            }
+            return;
+          }
+          print(
+            '[JustificationPage] ✓ Web file loaded: ${file.name} (${file.bytes!.length} bytes)',
+          );
+        } else {
+          if (file.path == null || file.path!.isEmpty) {
+            print('[JustificationPage] ERROR: File path is null or empty');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Error: Invalid file path')),
+              );
+            }
+            return;
+          }
+
+          // Validate file actually exists on native platforms
+          final fileExists = await File(file.path!).exists();
+          if (!fileExists) {
+            print(
+              '[JustificationPage] ERROR: File does not exist at path: ${file.path}',
+            );
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Error: File not found')),
+              );
+            }
+            return;
+          }
+          print(
+            '[JustificationPage] ✓ Native file selected: ${file.name} (${file.size} bytes)',
+          );
+        }
+
         setState(() => _selectedFile = file);
         print(
-          '[JustificationPage] ✓ File selected: ${file.name} (${file.size} bytes)',
+          '[JustificationPage] ✓ File ready: ${file.name} (${file.size} bytes)',
         );
       } else {
         print('[JustificationPage] File picker cancelled or no file selected');
@@ -129,31 +151,43 @@ class _JustificationPageState extends State<JustificationPage> {
   }
 
   Future<String?> _uploadFile() async {
-    if (_selectedFile == null ||
-        _selectedFile!.path == null ||
-        _selectedFile!.path!.isEmpty) {
+    if (_selectedFile == null) {
       print(
-        '[JustificationPage] ⚠️ ABORT UPLOAD: No file selected or null path',
+        '[JustificationPage] ⚠️ ABORT UPLOAD: No file selected',
       );
       return null;
     }
 
     try {
-      final filePath = _selectedFile!.path!;
       final fileName = _selectedFile!.name;
+      Uint8List fileBytes;
 
       print('[JustificationPage] 📤 STARTING FILE UPLOAD');
-      print('[JustificationPage]   Local file path: $filePath');
       print('[JustificationPage]   File name: $fileName');
       print('[JustificationPage]   File size: ${_selectedFile!.size} bytes');
+      print('[JustificationPage]   Platform: ${kIsWeb ? 'WEB' : 'NATIVE'}');
 
-      // Verify file exists
-      final file = File(filePath);
-      final fileExists = await file.exists();
-      if (!fileExists) {
-        throw Exception('Local file does not exist at: $filePath');
+      // Get file bytes based on platform
+      if (kIsWeb) {
+        // On web, use bytes directly from file picker
+        if (_selectedFile!.bytes == null || _selectedFile!.bytes!.isEmpty) {
+          throw Exception('Web file bytes are null or empty');
+        }
+        fileBytes = _selectedFile!.bytes!;
+        print('[JustificationPage]   ✓ Using bytes from web picker (${fileBytes.length} bytes)');
+      } else {
+        // On native platforms, read bytes from file path
+        if (_selectedFile!.path == null || _selectedFile!.path!.isEmpty) {
+          throw Exception('Native file path is null or empty');
+        }
+        final file = File(_selectedFile!.path!);
+        final fileExists = await file.exists();
+        if (!fileExists) {
+          throw Exception('Local file does not exist at: ${_selectedFile!.path}');
+        }
+        fileBytes = await file.readAsBytes();
+        print('[JustificationPage]   ✓ Read ${fileBytes.length} bytes from native path');
       }
-      print('[JustificationPage]   ✓ File exists on device');
 
       // Get authenticated user
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -170,9 +204,8 @@ class _JustificationPageState extends State<JustificationPage> {
 
       print('[JustificationPage]   Storage path: $bucketName/$uniqueFileName');
 
-      // Load file bytes and upload to Supabase Storage
+      // Upload to Supabase Storage
       print('[JustificationPage]   📝 Uploading to Supabase Storage...');
-      final bytes = await file.readAsBytes();
       final mimeType = _getMimeType(_selectedFile!.extension ?? 'pdf');
       final supabase = Supabase.instance.client;
 
@@ -180,7 +213,7 @@ class _JustificationPageState extends State<JustificationPage> {
           .from(bucketName)
           .uploadBinary(
             uniqueFileName,
-            bytes,
+            fileBytes,
             fileOptions: FileOptions(contentType: mimeType),
           );
 
@@ -200,7 +233,7 @@ class _JustificationPageState extends State<JustificationPage> {
       return publicUrl;
     } catch (e) {
       print('[JustificationPage] ❌ ERROR UPLOADING FILE: $e');
-      rethrow;
+      return null;
     }
   }
 

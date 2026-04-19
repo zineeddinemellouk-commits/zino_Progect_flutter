@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -49,45 +50,13 @@ class _JustificationPageState extends State<JustificationPage> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-        withData: false, // Get file path instead of bytes
+        withData: true, // required on web; harmless on mobile
       );
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.single;
-        print(
-          '[JustificationPage] File picked - Name: ${file.name}, Path: ${file.path}, Size: ${file.size}',
-        );
 
-        // Validate file exists
-        if (file.path == null || file.path!.isEmpty) {
-          print('[JustificationPage] ERROR: File path is null or empty');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Error: Invalid file path')),
-            );
-          }
-          return;
-        }
-
-        // Validate file actually exists
-        final fileExists = await File(file.path!).exists();
-        if (!fileExists) {
-          print(
-            '[JustificationPage] ERROR: File does not exist at path: ${file.path}',
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Error: File not found')),
-            );
-          }
-          return;
-        }
-
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          print(
-            '[JustificationPage] ERROR: File size ${file.size} exceeds 5MB limit',
-          );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('File size must be less than 5MB')),
@@ -113,7 +82,6 @@ class _JustificationPageState extends State<JustificationPage> {
     }
   }
 
-  /// Get MIME type from file extension
   String _getMimeType(String extension) {
     switch (extension.toLowerCase()) {
       case 'pdf':
@@ -129,50 +97,32 @@ class _JustificationPageState extends State<JustificationPage> {
   }
 
   Future<String?> _uploadFile() async {
-    if (_selectedFile == null ||
-        _selectedFile!.path == null ||
-        _selectedFile!.path!.isEmpty) {
-      print(
-        '[JustificationPage] ⚠️ ABORT UPLOAD: No file selected or null path',
-      );
-      return null;
-    }
+    if (_selectedFile == null) return null;
 
     try {
-      final filePath = _selectedFile!.path!;
-      final fileName = _selectedFile!.name;
-
       print('[JustificationPage] 📤 STARTING FILE UPLOAD');
-      print('[JustificationPage]   Local file path: $filePath');
-      print('[JustificationPage]   File name: $fileName');
-      print('[JustificationPage]   File size: ${_selectedFile!.size} bytes');
 
-      // Verify file exists
-      final file = File(filePath);
-      final fileExists = await file.exists();
-      if (!fileExists) {
-        throw Exception('Local file does not exist at: $filePath');
-      }
-      print('[JustificationPage]   ✓ File exists on device');
-
-      // Get authenticated user
       final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('User not authenticated');
+      if (currentUser == null) throw Exception('User not authenticated');
+
+      // Web uses bytes directly; mobile reads from path
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = _selectedFile!.bytes;
+      } else {
+        if (_selectedFile!.path == null) throw Exception('File path is null');
+        bytes = await File(_selectedFile!.path!).readAsBytes();
       }
-      print('[JustificationPage]   Student UID: ${currentUser.uid}');
 
-      // Create unique storage path
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('Could not read file bytes');
+      }
+
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      const bucketName = 'justifications'; // Your Supabase storage bucket name
+      const bucketName = 'justifications';
       final uniqueFileName =
-          '${currentUser.uid}/${widget.absence.id}/${timestamp}_$fileName';
+          '${currentUser.uid}/${widget.absence.id}/${timestamp}_${_selectedFile!.name}';
 
-      print('[JustificationPage]   Storage path: $bucketName/$uniqueFileName');
-
-      // Load file bytes and upload to Supabase Storage
-      print('[JustificationPage]   📝 Uploading to Supabase Storage...');
-      final bytes = await file.readAsBytes();
       final mimeType = _getMimeType(_selectedFile!.extension ?? 'pdf');
       final supabase = Supabase.instance.client;
 
@@ -184,19 +134,13 @@ class _JustificationPageState extends State<JustificationPage> {
             fileOptions: FileOptions(contentType: mimeType),
           );
 
-      if (uploadResponse.isEmpty) {
+      if (uploadResponse.isEmpty)
         throw Exception('Upload failed: empty response');
-      }
 
-      print('[JustificationPage]   ✓ Upload completed');
-
-      // Get public URL
-      print('[JustificationPage]   🔗 Fetching public URL...');
       final publicUrl = supabase.storage
           .from(bucketName)
           .getPublicUrl(uniqueFileName);
-      print('[JustificationPage]   ✓ Public URL: $publicUrl');
-
+      print('[JustificationPage] ✓ Public URL: $publicUrl');
       return publicUrl;
     } catch (e) {
       print('[JustificationPage] ❌ ERROR UPLOADING FILE: $e');
@@ -205,13 +149,7 @@ class _JustificationPageState extends State<JustificationPage> {
   }
 
   Future<void> _submitJustification() async {
-    // ========== STEP 1: VALIDATION ==========
-    print(
-      '\n[JustificationPage] ========== STARTING JUSTIFICATION SUBMISSION ==========',
-    );
-
     if (_selectedReason == null) {
-      print('[JustificationPage] ❌ VALIDATION FAILED: No reason selected');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a reason for absence')),
@@ -219,10 +157,8 @@ class _JustificationPageState extends State<JustificationPage> {
       }
       return;
     }
-    print('[JustificationPage] ✓ Reason selected: $_selectedReason');
 
     if (_selectedFile == null) {
-      print('[JustificationPage] ❌ VALIDATION FAILED: No file selected');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please upload a supporting document')),
@@ -230,116 +166,67 @@ class _JustificationPageState extends State<JustificationPage> {
       }
       return;
     }
-    print('[JustificationPage] ✓ File selected: ${_selectedFile!.name}');
 
     setState(() => _isSubmitting = true);
 
     try {
-      // ========== STEP 2: AUTHENTICATE ==========
-      print('[JustificationPage] Step 1: Getting current user...');
       final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('❌ User not authenticated');
-      }
-      print('[JustificationPage] ✓ Authenticated as: ${currentUser.uid}');
+      if (currentUser == null) throw Exception('User not authenticated');
 
-      // ========== STEP 3: FETCH STUDENT INFORMATION ==========
-      print('[JustificationPage] Step 2: Fetching student information...');
-      final studentQuery = await _firestore.collection('students').where('authUid', isEqualTo: currentUser.uid).limit(1).get();
-      if (studentQuery.docs.isEmpty) {
-        throw Exception('❌ Student profile not found');
-      }
+      final studentQuery = await _firestore
+          .collection('students')
+          .where('authUid', isEqualTo: currentUser.uid)
+          .limit(1)
+          .get();
+      if (studentQuery.docs.isEmpty)
+        throw Exception('Student profile not found');
+
       final studentDoc = studentQuery.docs.first;
       final studentData = studentDoc.data();
-      final studentName = studentData['fullName'] as String? ?? 'Unknown Student';
+      final studentName =
+          studentData['fullName'] as String? ?? 'Unknown Student';
       final levelId = studentData['levelId'] as String? ?? '';
       final groupId = studentData['groupId'] as String? ?? '';
 
-      // Resolve level and group names
-      final levelName = await _resolveName(_firestore.collection('levels'), levelId, fallback: levelId);
-      final groupName = await _resolveName(_firestore.collection('groups'), groupId, fallback: groupId);
-
-      print('[JustificationPage] ✓ Student: $studentName');
-      print('[JustificationPage] ✓ Level: $levelName');
-      print('[JustificationPage] ✓ Group: $groupName');
-
-      // ========== STEP 4: LOG SUBMISSION DETAILS ==========
-      print('[JustificationPage] Step 3: Submission details:');
-      print('[JustificationPage]   Student ID: ${studentDoc.id}');
-      print('[JustificationPage]   Auth UID: ${currentUser.uid}');
-      print('[JustificationPage]   Absence ID: ${widget.absence.id}');
-      print('[JustificationPage]   Reason: $_selectedReason');
-      print('[JustificationPage]   Details: ${_detailsController.text.trim()}');
-      print('[JustificationPage]   File: ${_selectedFile!.name}');
-
-      // ========== STEP 5: UPLOAD FILE TO SUPABASE STORAGE ==========
-      print(
-        '[JustificationPage] Step 4: Uploading file to Supabase Storage...',
+      final levelName = await _resolveName(
+        _firestore.collection('levels'),
+        levelId,
+        fallback: levelId,
       );
+      final groupName = await _resolveName(
+        _firestore.collection('groups'),
+        groupId,
+        fallback: groupId,
+      );
+
       final fileUrl = await _uploadFile();
-
-      if (fileUrl == null || fileUrl.isEmpty) {
-        throw Exception('❌ Failed to get download URL after upload');
-      }
-      print('[JustificationPage] ✓ File uploaded successfully');
-      print('[JustificationPage]   URL: $fileUrl');
-
-      // ========== STEP 6: CREATE JUSTIFICATION DOCUMENT IN FIRESTORE ==========
-      print(
-        '[JustificationPage] Step 5: Creating justification document in Firestore...',
-      );
-
-      final justificationData = {
-        'studentId': currentUser.uid,
-        'studentName': studentName,
-        'levelName': levelName,
-        'groupName': groupName,
-        'absenceId': widget.absence.id,
-        'subjectName': widget.absence.subjectName,
-        'teacherName': widget.absence.teacherName,
-        'reason': _selectedReason,
-        'details': _detailsController.text.trim(),
-        'fileUrl': fileUrl,
-        'fileType': _selectedFile!.extension ?? 'unknown',
-        'fileName': _selectedFile!.name,
-        'createdAt': FieldValue.serverTimestamp(),
-        'status': 'submitted',
-      };
-
-      print('[JustificationPage]   Document data: $justificationData');
+      if (fileUrl == null || fileUrl.isEmpty)
+        throw Exception('Failed to upload file');
 
       final justificationRef = await _firestore
           .collection('justifications')
-          .add(justificationData);
-      print('[JustificationPage] ✓ Justification document created');
-      print('[JustificationPage]   Document ID: ${justificationRef.id}');
+          .add({
+            'studentId': currentUser.uid,
+            'studentName': studentName,
+            'levelName': levelName,
+            'groupName': groupName,
+            'absenceId': widget.absence.id,
+            'subjectName': widget.absence.subjectName,
+            'teacherName': widget.absence.teacherName,
+            'reason': _selectedReason,
+            'details': _detailsController.text.trim(),
+            'fileUrl': fileUrl,
+            'fileType': _selectedFile!.extension ?? 'unknown',
+            'fileName': _selectedFile!.name,
+            'createdAt': FieldValue.serverTimestamp(),
+            'status': 'submitted',
+          });
 
-      // ========== STEP 7: UPDATE ABSENCE STATUS IN FIRESTORE ==========
-      print(
-        '[JustificationPage] Step 6: Updating absence status to "justified"...',
-      );
-
-      final absenceUpdateData = {
+      await _firestore.collection('absences').doc(widget.absence.id).update({
         'status': 'justified',
         'justificationSubmittedAt': FieldValue.serverTimestamp(),
-        'justificationId':
-            justificationRef.id, // Link to justification document
-      };
-
-      print('[JustificationPage]   Update data: $absenceUpdateData');
-
-      await _firestore
-          .collection('absences')
-          .doc(widget.absence.id)
-          .update(absenceUpdateData);
-
-      print('[JustificationPage] ✓ Absence status updated to "justified"');
-
-      // ========== STEP 7: SUCCESS ==========
-      print(
-        '[JustificationPage] ✅ JUSTIFICATION SUBMISSION COMPLETED SUCCESSFULLY',
-      );
-      print('[JustificationPage] ========== END OF SUBMISSION ==========\n');
+        'justificationId': justificationRef.id,
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -349,17 +236,11 @@ class _JustificationPageState extends State<JustificationPage> {
             backgroundColor: Color(0xFF12B76A),
           ),
         );
-
-        // Navigate back after a short delay
         await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          Navigator.of(context).pop(true);
-        }
+        if (mounted) Navigator.of(context).pop(true);
       }
     } catch (e) {
-      print('[JustificationPage] ❌ ERROR DURING SUBMISSION: $e');
-      print('[JustificationPage] ========== SUBMISSION FAILED ==========\n');
-
+      print('[JustificationPage] ❌ ERROR: $e');
       if (mounted) {
         setState(() => _isSubmitting = false);
 
@@ -410,27 +291,16 @@ class _JustificationPageState extends State<JustificationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. ABSENCE INFO CARD
             _buildAbsenceInfoCard(),
             const SizedBox(height: 24),
-
-            // 2. WHY WERE YOU ABSENT?
             _buildReasonSection(),
             const SizedBox(height: 24),
-
-            // 3. ADDITIONAL DETAILS
             _buildAdditionalDetailsSection(),
             const SizedBox(height: 24),
-
-            // 4. SUPPORTING DOCUMENTS
             _buildSupportingDocumentsSection(),
             const SizedBox(height: 24),
-
-            // 5. SUBMIT BUTTON
             _buildSubmitButton(),
             const SizedBox(height: 16),
-
-            // Disclaimer
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
               child: Text(
@@ -550,9 +420,9 @@ class _JustificationPageState extends State<JustificationPage> {
                 color: Color(0xFF667085),
               ),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'Duration: 2 Hours',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF667085),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -591,7 +461,6 @@ class _JustificationPageState extends State<JustificationPage> {
           itemBuilder: (context, index) {
             final reason = _reasons[index];
             final isSelected = _selectedReason == reason;
-
             return GestureDetector(
               onTap: () => setState(() => _selectedReason = reason),
               child: Container(
@@ -714,8 +583,8 @@ class _JustificationPageState extends State<JustificationPage> {
                       Container(
                         width: 60,
                         height: 60,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8E5FF),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE8E5FF),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -750,8 +619,8 @@ class _JustificationPageState extends State<JustificationPage> {
                       Container(
                         width: 60,
                         height: 60,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE8F5E9),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -842,7 +711,11 @@ class _JustificationPageState extends State<JustificationPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  Future<String> _resolveName(CollectionReference collection, String id, {required String fallback}) async {
+  Future<String> _resolveName(
+    CollectionReference collection,
+    String id, {
+    required String fallback,
+  }) async {
     if (id.trim().isEmpty) return fallback;
     final snap = await collection.doc(id).get();
     if (snap.exists) {

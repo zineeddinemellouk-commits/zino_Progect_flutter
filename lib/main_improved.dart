@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:test/firebase_options.dart';
+import 'package:test/l10n/language_service.dart';
 import 'package:test/l10n/language_provider.dart';
 import 'package:test/l10n/app_localizations.dart';
 import 'pages/login_page.dart';
@@ -18,46 +19,49 @@ import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
 import 'package:test/pages/role_home_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
-import 'package:test/services/auth_provider.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Global LanguageService instance
+late LanguageService _languageService;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // ✅ Initialize LanguageProvider (single source of truth for language)
-  // This loads saved language from SharedPreferences before first build
-  final languageProvider = LanguageProvider();
-  await languageProvider.initialize();
+  // Initialize LanguageService (loads saved language from SharedPreferences)
+  _languageService = LanguageService();
+  await _languageService.initialize();
 
-  runApp(MyApp(languageProvider: languageProvider));
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final LanguageProvider languageProvider;
-
-  const MyApp({required this.languageProvider, super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: languageProvider),
-        ChangeNotifierProvider(
-          create: (_) => AppAuthProvider()..initializeAuthListener(),
-        ),
+        // StudentManagementProvider for student data
         ChangeNotifierProvider(create: (_) => StudentManagementProvider()),
+        // LanguageProvider for i18n
+        ChangeNotifierProvider(
+          create: (_) => LanguageProvider()
+            ..initializeWithSavedLanguage(_languageService.getSavedLanguage()),
+        ),
       ],
       child: Consumer<LanguageProvider>(
-        builder: (context, langProvider, child) {
+        builder: (context, languageProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Hodoori - Smart Attendance',
-            // ✅ Use language from provider (single source of truth)
-            locale: langProvider.locale,
+
+            // ── Localization Setup ──────────────────────────────
+            locale: languageProvider.locale,
             supportedLocales: appSupportedLocales,
             localizationsDelegates: const [
               AppLocalizationsDelegate(),
@@ -65,11 +69,13 @@ class MyApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
+
             theme: ThemeData(
               useMaterial3: true,
               fontFamily: 'Inter',
               brightness: Brightness.light,
             ),
+
             initialRoute: '/login',
             routes: {
               '/login': (_) => const HodooriLoginScreen(),
@@ -173,15 +179,16 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
   }
 
   Widget _destinationForProfile(AppUserProfile profile) {
-    if (profile.role == 'Department') return const DepartmentDashboard();
-    if (profile.role == 'Student') {
+    final role = profile.role.toLowerCase();
+    if (role == 'department') return const DepartmentDashboard();
+    if (role == 'student') {
       return StudentsPage(
         selfViewOnly: true,
         studentDocumentId: profile.linkedDocumentId,
         studentEmail: profile.email,
       );
     }
-    if (profile.role == 'Teacher') {
+    if (role == 'teacher') {
       return TeacherProfilePage(
         teacherId: profile.linkedDocumentId,
         teacherEmail: profile.email,
@@ -872,7 +879,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
   }
 }
 
-// ── LOGO PAINTER ─────────────────────────────────────────────────────
+// ── LOGO PAINTER ──────────────────────────────────────────────────
 class _HodooriLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

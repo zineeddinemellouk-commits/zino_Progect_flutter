@@ -15,7 +15,7 @@ class ViewStudent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: departmentAppBar(context, context.tr('students')),
       drawer: departmentDrawer(context),
       body: Padding(
@@ -27,7 +27,10 @@ class ViewStudent extends StatelessWidget {
           children: [
             Text(
               context.tr('filter'),
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
             const SizedBox(height: 14),
             Expanded(
@@ -43,7 +46,11 @@ class ViewStudent extends StatelessWidget {
                       child: Text(
                         context.tr('error'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade700),
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     );
                   }
@@ -53,7 +60,11 @@ class ViewStudent extends StatelessWidget {
                     return Center(
                       child: Text(
                         context.tr('loading'),
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
                       ),
                     );
                   }
@@ -65,7 +76,7 @@ class ViewStudent extends StatelessWidget {
 
                       return HierarchyItemCard(
                         title: level.name,
-                        subtitle: context.tr('filter'),
+                        subtitle: 'Tap to view groups',
                         leadingIcon: Icons.school_rounded,
                         onTap: () => Navigator.pushNamed(
                           context,

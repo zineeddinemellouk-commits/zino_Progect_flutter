@@ -6,7 +6,7 @@
 ✅ **App never freezes** on errors  
 ✅ **Users can retry easily** with one button  
 ✅ **All fields preserved** for quick corrections  
-✅ **Centralized utility** = easy to maintain  
+✅ **Centralized utility** = easy to maintain
 
 ---
 
@@ -22,17 +22,17 @@ import 'package:test/utils/error_dialog_helper.dart';
 try {
   // Do your operation
   await myAsyncOperation();
-  
+
   // ✅ Show success
   if (!mounted) return;
   ErrorDialogHelper.showSuccessSnackBar(
-    context, 
+    context,
     'Operation successful!'
   );
-  
+
   // Continue as needed (navigate, close dialog, etc)
   Navigator.pop(context);
-  
+
 } catch (e) {
   // ❌ Show error
   if (!mounted) return;
@@ -49,6 +49,7 @@ try {
 ## 📌 The 4 Methods You'll Use
 
 ### 1. Show Error Dialog (Most Common)
+
 ```dart
 await ErrorDialogHelper.showErrorDialog(
   context,
@@ -64,6 +65,7 @@ await ErrorDialogHelper.showErrorDialog(
 **When to use:** Critical errors (auth, delete, important operations)
 
 ### 2. Show Success Snackbar
+
 ```dart
 ErrorDialogHelper.showSuccessSnackBar(
   context,
@@ -74,6 +76,7 @@ ErrorDialogHelper.showSuccessSnackBar(
 **When to use:** Success confirmation (quick feedback)
 
 ### 3. Show Error Snackbar
+
 ```dart
 ErrorDialogHelper.showErrorSnackBar(
   context,
@@ -84,6 +87,7 @@ ErrorDialogHelper.showErrorSnackBar(
 **When to use:** Validation errors (field-level feedback)
 
 ### 4. Get Firebase Error Message (Rarely Direct)
+
 ```dart
 String message = ErrorDialogHelper.getFirebaseErrorMessage(exception);
 // Returns: "Invalid email or password."
@@ -117,13 +121,13 @@ account-exists-with-different-credential → "Account exists with different logi
 
 ## 💾 Files Changed
 
-| File | What Changed |
-|------|--------------|
-| **NEW:** `lib/utils/error_dialog_helper.dart` | Centralized error utility |
-| `lib/pages/login_page.dart` | Now uses ErrorDialogHelper |
-| `lib/pages/departement/AddStudent.dart` | Now uses ErrorDialogHelper |
-| `lib/pages/departement/AddTeacher.dart` | Now uses ErrorDialogHelper |
-| `lib/pages/departement/students_screen.dart` | Now uses ErrorDialogHelper |
+| File                                          | What Changed               |
+| --------------------------------------------- | -------------------------- |
+| **NEW:** `lib/utils/error_dialog_helper.dart` | Centralized error utility  |
+| `lib/pages/login_page.dart`                   | Now uses ErrorDialogHelper |
+| `lib/pages/departement/AddStudent.dart`       | Now uses ErrorDialogHelper |
+| `lib/pages/departement/AddTeacher.dart`       | Now uses ErrorDialogHelper |
+| `lib/pages/departement/students_screen.dart`  | Now uses ErrorDialogHelper |
 
 **Total:** 4 files modified + 1 new file created
 
@@ -132,6 +136,7 @@ account-exists-with-different-credential → "Account exists with different logi
 ## 🎨 What Shows Up to Users
 
 ### Error Dialog (What They See)
+
 ```
 ┌──────────────────────────────────┐
 │ ❌ Login Failed                 │
@@ -145,6 +150,7 @@ account-exists-with-different-credential → "Account exists with different logi
 ```
 
 ### Success Snackbar (What They See)
+
 ```
 ┌────────────────────────────────┐
 │ ✅ Student added successfully! │ (at bottom)
@@ -153,6 +159,7 @@ account-exists-with-different-credential → "Account exists with different logi
 ```
 
 ### When Errors Show Up
+
 - ❌ Wrong password/email → Modal dialog
 - ❌ Network error → Modal dialog
 - ❌ Database error → Modal dialog
@@ -164,12 +171,15 @@ account-exists-with-different-credential → "Account exists with different logi
 ## 🔐 Safety Checks Included
 
 ### Built-in `if (!mounted) return;`
+
 Every method checks if widget is still there before trying to show anything. Prevents crashes when:
+
 - User navigates away while operation running
 - App goes to background
 - Dialog gets closed
 
 ### Modal Dialogs Can't Be Dismissed
+
 User can't accidentally tap outside → dialog disappears. They MUST click the button. Ensures they see important errors.
 
 ---
@@ -199,6 +209,7 @@ This pattern is consistent everywhere!
 ## 📚 Documentation Files
 
 **To understand more, read:**
+
 1. `IMPLEMENTATION_SUMMARY.md` - What was done and why
 2. `BEFORE_AFTER_COMPARISON.md` - See the improvement visually
 3. `VISUAL_FLOW_DIAGRAMS.md` - All user flows with diagrams
@@ -226,12 +237,15 @@ This pattern is consistent everywhere!
 ## 🚀 Next Steps
 
 ### For Existing Code
+
 No action needed! Everything is already implemented and working.
 
 ### For New Features
+
 Just follow the pattern shown above in "How to Use It" section (3 lines of code!)
 
 ### To Test Yourself
+
 1. Run app: `flutter run`
 2. Try logging in with wrong password
 3. See the beautiful error dialog → Much better! 🎉
@@ -254,6 +268,7 @@ Just follow the pattern shown above in "How to Use It" section (3 lines of code!
 ## 💡 Pro Tips
 
 **Tip 1:** Always check `if (!mounted) return;` before using context
+
 ```dart
 // Safe! ✅
 if (!mounted) return;
@@ -264,6 +279,7 @@ ErrorDialogHelper.showErrorDialog(context, ...);  // Might crash
 ```
 
 **Tip 2:** Use descriptive error titles
+
 ```dart
 // Bad ❌
 await ErrorDialogHelper.showErrorDialog(context, title: 'Error');
@@ -273,6 +289,7 @@ await ErrorDialogHelper.showErrorDialog(context, title: '❌ Add Failed');
 ```
 
 **Tip 3:** Keep error messages simple
+
 ```dart
 // Bad ❌
 message: 'FirebaseAuthException: user-not-found [firebase]'
@@ -282,6 +299,7 @@ message: 'Invalid email or password.'
 ```
 
 **Tip 4:** Debug print in try blocks
+
 ```dart
 try {
   print('DEBUG: Starting operation...');
@@ -311,6 +329,7 @@ A: That's intentional! Users must click "Try Again" to acknowledge. It ensures t
 
 **Q: How do I add custom logic in "Try Again"?**
 A: Pass `onRetry` callback:
+
 ```dart
 await ErrorDialogHelper.showErrorDialog(
   context,
@@ -335,4 +354,3 @@ await ErrorDialogHelper.showErrorDialog(
 ---
 
 **Your app now has world-class error handling! 🎉**
-

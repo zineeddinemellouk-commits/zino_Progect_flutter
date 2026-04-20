@@ -21,7 +21,10 @@ import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/providers/locale_provider.dart';
+import 'package:test/providers/theme_provider.dart';
 import 'package:test/services/localization_service.dart';
+import 'package:test/features/departments/providers/department_notification_provider.dart';
+import 'package:test/utils/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,16 +52,16 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => StudentManagementProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => DepartmentNotificationProvider()),
       ],
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProvider, _) => MaterialApp(
+      child: Consumer2<LocaleProvider, ThemeProvider>(
+        builder: (context, localeProvider, themeProvider, _) => MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Hodoori - Smart Attendance',
-          theme: ThemeData(
-            useMaterial3: true,
-            fontFamily: 'Inter',
-            brightness: Brightness.light,
-          ),
+          theme: AppTheme.lightTheme(),
+          darkTheme: AppTheme.darkTheme(),
+          themeMode: themeProvider.themeMode,
           locale: localeProvider.currentLocale,
           supportedLocales: LocaleProvider.supportedLocales,
           localizationsDelegates: const [

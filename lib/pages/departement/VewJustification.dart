@@ -13,11 +13,11 @@ class VewJustification extends StatelessWidget {
     final provider = context.watch<StudentManagementProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFF8F9FB),
-        foregroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         title: Text(
           context.tr('justification_requests'),
           style: const TextStyle(fontWeight: FontWeight.w800),
@@ -31,10 +31,10 @@ class VewJustification extends StatelessWidget {
             children: [
               Text(
                 context.tr('justification_requests'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -47,7 +47,7 @@ class VewJustification extends StatelessWidget {
                       .length;
                   return Text(
                     '$pending ${context.tr('pending_requests')}',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   );
                 },
               ),
@@ -162,7 +162,7 @@ class _JustificationCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: statusColor.withOpacity(0.25)),
         boxShadow: [
@@ -212,10 +212,10 @@ class _JustificationCard extends StatelessWidget {
                         children: [
                           Text(
                             item.studentName ?? 'Unknown Student',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1A1A),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -223,7 +223,7 @@ class _JustificationCard extends StatelessWidget {
                             item.levelName ?? 'Unknown Level',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -250,7 +250,7 @@ class _JustificationCard extends StatelessWidget {
                             '${item.subject} • ${item.teacherName}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -258,7 +258,7 @@ class _JustificationCard extends StatelessWidget {
                             item.email ?? '-',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -290,12 +290,12 @@ class _JustificationCard extends StatelessWidget {
                     Icon(
                       Icons.calendar_today,
                       size: 16,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${context.tr('absence_date')}: ${item.absenceDate.toIso8601String().split('T').first}',
-                      style: TextStyle(color: Colors.grey[700]),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                     ),
                   ],
                 ),

@@ -99,11 +99,15 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
 }
 
 Drawer departmentDrawer(BuildContext context) {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
   return Drawer(
     child: Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFF8F9FB), Color(0xFFE8F0FE)],
+          colors: isDarkMode
+              ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+              : [const Color(0xFFF8F9FB), const Color(0xFFE8F0FE)],
         ),
       ),
       child: ListView(
@@ -144,58 +148,58 @@ Drawer departmentDrawer(BuildContext context) {
                 builder: (context) => const DepartmentDashboard(),
               ),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.person_add, context.tr('add'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddStudent()),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.school, context.tr('teachers'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddTeacher()),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.subject, context.tr('subjects'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddSubject()),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.people, context.tr('students'), () {
             Navigator.pop(context);
             Navigator.pushNamed(context, ViewStudent.routeName);
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.badge, context.tr('teachers'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ViewTeachers()),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.book, context.tr('subjects'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ViewSubjects()),
             );
-          }),
+          }, isDarkMode),
           _drawerItem(context, Icons.visibility, context.tr('attendance'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const VewJustification()),
             );
-          }),
+          }, isDarkMode),
           const Divider(height: 20),
           _drawerItem(context, Icons.logout, context.tr('cancel'), () {
             Navigator.pop(context);
             _logoutFromDepartment(context);
-          }),
+          }, isDarkMode),
         ],
       ),
     ),
@@ -207,6 +211,7 @@ Widget _drawerItem(
   IconData icon,
   String text,
   VoidCallback onTap,
+  bool isDarkMode,
 ) {
   return Container(
     margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -214,14 +219,14 @@ Widget _drawerItem(
       leading: Icon(icon, color: const Color(0xFF2563EB)),
       title: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      tileColor: Colors.white,
+      tileColor: Theme.of(context).cardColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     ),
   );

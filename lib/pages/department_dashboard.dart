@@ -29,9 +29,10 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentManagementProvider>();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: departmentAppBar(context, context.tr('dashboard')),
       drawer: departmentDrawer(context),
       body: Padding(
@@ -108,6 +109,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                           child: _statCard(
                             context.tr('students'),
                             totalStudents.toString(),
+                            isDarkMode,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -115,6 +117,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                           child: _statCard(
                             context.tr('teachers'),
                             teachers.length.toString(),
+                            isDarkMode,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -122,6 +125,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                           child: _statCard(
                             context.tr('attendance'),
                             "${attendance.toStringAsFixed(1)}%",
+                            isDarkMode,
                           ),
                         ),
                       ],
@@ -133,7 +137,12 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
             const SizedBox(height: 20),
             Text(
               context.tr('attendance'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isDarkMode
+                    ? const Color(0xFFF1F5F9)
+                    : const Color(0xFF1F2937),
+              ),
             ),
             const SizedBox(height: 10),
             StreamBuilder(
@@ -218,14 +227,19 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     );
   }
 
-  Widget _statCard(String title, String value) {
+  Widget _statCard(String title, String value, bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+          BoxShadow(
+            color: isDarkMode
+                ? Colors.black.withOpacity(0.2)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+          ),
         ],
       ),
       child: Column(
@@ -233,8 +247,8 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF9CA3AF),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -242,10 +256,10 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],

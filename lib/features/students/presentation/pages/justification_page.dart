@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/helpers/localization_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test/features/departments/data/department_notification_service.dart';
 
 class JustificationPage extends StatefulWidget {
   const JustificationPage({required this.absence, super.key});
@@ -19,6 +20,7 @@ class JustificationPage extends StatefulWidget {
 
 class _JustificationPageState extends State<JustificationPage> {
   late final FirebaseFirestore _firestore;
+  late final DepartmentNotificationService _departmentNotificationService;
 
   final TextEditingController _detailsController = TextEditingController();
   String? _selectedReason;
@@ -37,6 +39,7 @@ class _JustificationPageState extends State<JustificationPage> {
   void initState() {
     super.initState();
     _firestore = FirebaseFirestore.instance;
+    _departmentNotificationService = DepartmentNotificationService();
   }
 
   @override
@@ -371,7 +374,7 @@ class _JustificationPageState extends State<JustificationPage> {
       );
 
       final absenceUpdateData = {
-        'status': 'justified',
+        'status': 'submitted',
         'justificationSubmittedAt': FieldValue.serverTimestamp(),
         'justificationId':
             justificationRef.id, // Link to justification document
@@ -384,9 +387,34 @@ class _JustificationPageState extends State<JustificationPage> {
           .doc(widget.absence.id)
           .update(absenceUpdateData);
 
-      print('[JustificationPage] ✓ Absence status updated to "justified"');
+      print('[JustificationPage] ✓ Absence status updated to "submitted"');
 
-      // ========== STEP 7: SUCCESS ==========
+      // ========== STEP 8: CREATE DEPARTMENT NOTIFICATION ==========
+      print('[JustificationPage] Step 7: Creating department notification...');
+
+      try {
+        // Get department ID (you may need to adjust this based on your structure)
+        final departmentId =
+            'main-department'; // Change this to your actual department ID
+
+        await _departmentNotificationService.createJustificationNotification(
+          departmentId: departmentId,
+          studentId: currentUser.uid,
+          studentName: studentName,
+          justificationId: justificationRef.id,
+          absenceId: widget.absence.id,
+          subjectName: widget.absence.subjectName,
+        );
+
+        print('[JustificationPage] ✓ Department notification created');
+      } catch (notificationError) {
+        print(
+          '[JustificationPage] ⚠️ Warning: Failed to create notification: $notificationError',
+        );
+        // Don't fail the submission if notification creation fails
+      }
+
+      // ========== STEP 8: SUCCESS ==========
       print(
         '[JustificationPage] ✅ JUSTIFICATION SUBMISSION COMPLETED SUCCESSFULLY',
       );

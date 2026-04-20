@@ -3,47 +3,41 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/helpers/localization_helper.dart';
 import 'package:test/providers/locale_provider.dart';
-import 'package:test/providers/theme_provider.dart';
+import 'package:test/features/departments/providers/department_notification_provider.dart';
+import 'package:test/features/departments/pages/department_notifications_page.dart';
 
-class DepartmentSettingsPage extends StatefulWidget {
-  const DepartmentSettingsPage({super.key});
+class TeacherSettingsPage extends StatefulWidget {
+  const TeacherSettingsPage({super.key});
 
-  static const String routeName = '/department/settings';
+  static const String routeName = '/teacher/settings';
 
   @override
-  State<DepartmentSettingsPage> createState() => _DepartmentSettingsPageState();
+  State<TeacherSettingsPage> createState() => _TeacherSettingsPageState();
 }
 
-class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
+class _TeacherSettingsPageState extends State<TeacherSettingsPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   late TextEditingController _displayNameController;
-  late TextEditingController _universityNameController;
 
   bool _notificationsEnabled = true;
-  String _selectedAcademicYear = '2024-2025';
-  String _selectedSemester = 'S1';
   bool _darkModeEnabled = false;
 
   bool _isLoadingProfile = false;
-  bool _isLoadingDepartment = false;
 
   @override
   void initState() {
     super.initState();
     _displayNameController = TextEditingController();
-    _universityNameController = TextEditingController();
     _loadUserProfile();
   }
 
   @override
   void dispose() {
     _displayNameController.dispose();
-    _universityNameController.dispose();
     super.dispose();
   }
 
@@ -62,9 +56,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
           final data = doc.data() ?? {};
           setState(() {
             _displayNameController.text = data['displayName'] ?? '';
-            _universityNameController.text = data['universityName'] ?? '';
-            _selectedAcademicYear = data['academicYear'] ?? '2024-2025';
-            _selectedSemester = data['semester'] ?? 'S1';
             _notificationsEnabled = data['notificationsEnabled'] ?? true;
           });
         }
@@ -94,29 +85,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       _showError('${context.tr('error_saving_profile')}: $e');
     } finally {
       if (mounted) setState(() => _isLoadingProfile = false);
-    }
-  }
-
-  // ── Save Department Settings ──────────────────────────────────────
-
-  Future<void> _saveDepartmentSettings() async {
-    try {
-      setState(() => _isLoadingDepartment = true);
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore.collection('user_profiles').doc(user.uid).set({
-          'universityName': _universityNameController.text.trim(),
-          'academicYear': _selectedAcademicYear,
-          'semester': _selectedSemester,
-        }, SetOptions(merge: true));
-        if (!mounted) return;
-        _showSuccess(context.tr('settings_saved_success'));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _showError('${context.tr('error_saving_settings')}: $e');
-    } finally {
-      if (mounted) setState(() => _isLoadingDepartment = false);
     }
   }
 
@@ -359,9 +327,70 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     final user = _auth.currentUser;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: departmentAppBar(context, context.tr('settings')),
-      drawer: departmentDrawer(context),
+      backgroundColor: const Color(0xFFF8F9FB),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: const Color(0xFFF8F9FB),
+        foregroundColor: const Color(0xFF1A1A1A),
+        title: Text(
+          context.tr('settings'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        actions: [
+          // Notification Bell Icon
+          Consumer<DepartmentNotificationProvider>(
+            builder: (context, provider, _) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_outlined,
+                      color: Color(0xFF4F46E5),
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => DepartmentNotificationsPage(
+                            departmentId: 'main-department',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  // Badge with unread count
+                  if (provider.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD92D20),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          provider.unreadCount > 99
+                              ? '99+'
+                              : provider.unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -406,7 +435,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          user?.email ?? context.tr('department'),
+                          user?.email ?? context.tr('teacher'),
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -611,9 +640,9 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                             ),
                           ),
                           Switch(
-                            value: context.watch<ThemeProvider>().isDarkMode,
+                            value: _darkModeEnabled,
                             onChanged: (v) =>
-                                context.read<ThemeProvider>().toggleTheme(),
+                                setState(() => _darkModeEnabled = v),
                             thumbColor: WidgetStateProperty.resolveWith<Color>(
                               (states) => states.contains(WidgetState.selected)
                                   ? const Color(0xFF2563EB)
@@ -629,70 +658,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // ── Department Settings ─────────────────────────────────
-            _sectionTitle(
-              context.tr('department_settings'),
-              Icons.account_balance_outlined,
-            ),
-            const SizedBox(height: 10),
-            _card(
-              children: [
-                _label(context.tr('university_name')),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _universityNameController,
-                  decoration: _inputDeco(
-                    context.tr('enter_university_name'),
-                    Icons.school_outlined,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _label(context.tr('academic_year')),
-                          const SizedBox(height: 6),
-                          _dropdown(
-                            value: _selectedAcademicYear,
-                            items: ['2024-2025', '2025-2026', '2026-2027'],
-                            onChanged: (v) =>
-                                setState(() => _selectedAcademicYear = v!),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _label(context.tr('semester')),
-                          const SizedBox(height: 6),
-                          _dropdown(
-                            value: _selectedSemester,
-                            items: ['S1', 'S2'],
-                            onChanged: (v) =>
-                                setState(() => _selectedSemester = v!),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _saveButton(
-                  label: context.tr('save_department_settings'),
-                  isLoading: _isLoadingDepartment,
-                  onPressed: _saveDepartmentSettings,
-                  color: const Color(0xFF004AC6),
                 ),
               ],
             ),
@@ -717,7 +682,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: departmentBottomNav(context, 3),
     );
   }
 
@@ -730,10 +694,10 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Color(0xFF1F2937),
           ),
         ),
       ],
@@ -744,7 +708,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -764,10 +728,10 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
   Widget _label(String text) {
     return Text(
       text,
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.onSurface,
+        color: Color(0xFF374151),
       ),
     );
   }
@@ -775,7 +739,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
   InputDecoration _inputDeco(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 20),
+      prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -793,30 +757,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, color: color, size: 20),
-    );
-  }
-
-  Widget _dropdown({
-    required String value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButton<String>(
-        value: value,
-        isExpanded: true,
-        underline: const SizedBox(),
-        borderRadius: BorderRadius.circular(10),
-        items: items
-            .map((i) => DropdownMenuItem(value: i, child: Text(i)))
-            .toList(),
-        onChanged: onChanged,
-      ),
     );
   }
 
@@ -892,15 +832,15 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       children: [
         Text(
           label,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+          style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
         ),
         const Spacer(),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Color(0xFF1F2937),
           ),
         ),
       ],

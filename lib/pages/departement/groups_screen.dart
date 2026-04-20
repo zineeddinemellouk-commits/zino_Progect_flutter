@@ -74,7 +74,9 @@ class GroupsScreen extends StatelessWidget {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Group added successfully.'),
+                                      content: Text(
+                                        'Group added successfully.',
+                                      ),
                                     ),
                                   );
                                 }
@@ -122,13 +124,15 @@ class GroupsScreen extends StatelessWidget {
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args is! LevelModel) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FB),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: departmentAppBar(context, 'Groups'),
         drawer: departmentDrawer(context),
         body: Center(
           child: Text(
             'Unable to open groups: invalid level data.',
-            style: TextStyle(color: Colors.grey.shade700),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
         ),
       );
@@ -137,7 +141,7 @@ class GroupsScreen extends StatelessWidget {
     final level = args;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: departmentAppBar(context, 'Groups - ${level.name}'),
       drawer: departmentDrawer(context),
       body: Padding(
@@ -147,14 +151,14 @@ class GroupsScreen extends StatelessWidget {
           children: [
             Text(
               'Select a group in ${level.name}',
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
+              style: TextStyle(fontSize: 15, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
             const SizedBox(height: 14),
             Expanded(
               child: StreamBuilder(
                 stream: context
                     .read<StudentManagementProvider>()
-                  .watchGroupsByLevel(levelId: level.id),
+                    .watchGroupsByLevel(levelId: level.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -165,7 +169,7 @@ class GroupsScreen extends StatelessWidget {
                       child: Text(
                         'Could not load groups. Please verify your network.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade700),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                       ),
                     );
                   }
@@ -176,7 +180,7 @@ class GroupsScreen extends StatelessWidget {
                       child: Text(
                         'No groups found for ${level.name}. Add one using + button.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                       ),
                     );
                   }

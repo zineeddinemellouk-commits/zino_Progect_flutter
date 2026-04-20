@@ -2,7 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:test/pages/departement/common_widgets.dart';
+import 'package:test/helpers/localization_helper.dart';
+import 'package:test/providers/locale_provider.dart';
 
 class DepartmentSettingsPage extends StatefulWidget {
   const DepartmentSettingsPage({super.key});
@@ -20,7 +23,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
   late TextEditingController _displayNameController;
   late TextEditingController _universityNameController;
 
-  String _selectedLanguage = 'English';
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
   String _selectedAcademicYear = '2024-2025';
@@ -62,14 +64,13 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
             _universityNameController.text = data['universityName'] ?? '';
             _selectedAcademicYear = data['academicYear'] ?? '2024-2025';
             _selectedSemester = data['semester'] ?? 'S1';
-            _selectedLanguage = data['language'] ?? 'English';
             _notificationsEnabled = data['notificationsEnabled'] ?? true;
           });
         }
       }
     } catch (e) {
       if (!mounted) return;
-      _showError('Error loading profile: $e');
+      _showError(context.tr('error_loading_profile'));
     }
   }
 
@@ -82,15 +83,14 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       if (user != null) {
         await _firestore.collection('user_profiles').doc(user.uid).set({
           'displayName': _displayNameController.text.trim(),
-          'language': _selectedLanguage,
           'notificationsEnabled': _notificationsEnabled,
         }, SetOptions(merge: true));
         if (!mounted) return;
-        _showSuccess('Profile saved successfully!');
+        _showSuccess(context.tr('profile_saved_success'));
       }
     } catch (e) {
       if (!mounted) return;
-      _showError('Error saving profile: $e');
+      _showError('${context.tr('error_saving_profile')}: $e');
     } finally {
       if (mounted) setState(() => _isLoadingProfile = false);
     }
@@ -109,11 +109,11 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
           'semester': _selectedSemester,
         }, SetOptions(merge: true));
         if (!mounted) return;
-        _showSuccess('Department settings saved!');
+        _showSuccess(context.tr('settings_saved_success'));
       }
     } catch (e) {
       if (!mounted) return;
-      _showError('Error saving settings: $e');
+      _showError('${context.tr('error_saving_settings')}: $e');
     } finally {
       if (mounted) setState(() => _isLoadingDepartment = false);
     }
@@ -129,27 +129,27 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Change Email',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        title: Text(
+          dialogContext.tr('change_email'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: newEmailController,
-              decoration: const InputDecoration(
-                labelText: 'New Email',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: dialogContext.tr('new_email'),
+                border: const OutlineInputBorder(),
               ),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: currentPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Current Password',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: dialogContext.tr('current_password'),
+                border: const OutlineInputBorder(),
               ),
               obscureText: true,
             ),
@@ -158,7 +158,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(dialogContext.tr('cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -174,7 +174,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
               Navigator.pop(dialogContext);
               await _performChangeEmail(email, password);
             },
-            child: const Text('Change'),
+            child: Text(dialogContext.tr('confirm')),
           ),
         ],
       ),
@@ -195,13 +195,13 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       await user.reauthenticateWithCredential(credential);
       await user.verifyBeforeUpdateEmail(newEmail);
       if (!mounted) return;
-      _showSuccess('Verification link sent! Check your new email inbox.');
+      _showSuccess(context.tr('verification_link_sent'));
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showError(e.message ?? 'Error changing email.');
+      _showError(e.message ?? context.tr('error_changing_email'));
     } catch (e) {
       if (!mounted) return;
-      _showError('Error changing email: $e');
+      _showError('${context.tr('error_changing_email')}: $e');
     }
   }
 
@@ -216,36 +216,36 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Change Password',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        title: Text(
+          dialogContext.tr('change_password'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: currentPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Current Password',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: dialogContext.tr('current_password'),
+                border: const OutlineInputBorder(),
               ),
               obscureText: true,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: newPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'New Password',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: dialogContext.tr('new_password'),
+                border: const OutlineInputBorder(),
               ),
               obscureText: true,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: confirmPasswordController,
-              decoration: const InputDecoration(
-                labelText: 'Confirm Password',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: dialogContext.tr('confirm_password'),
+                border: const OutlineInputBorder(),
               ),
               obscureText: true,
             ),
@@ -254,7 +254,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(dialogContext.tr('cancel')),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -271,7 +271,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
               Navigator.pop(dialogContext);
               await _performChangePassword(current, newPass, confirm);
             },
-            child: const Text('Change'),
+            child: Text(dialogContext.tr('confirm')),
           ),
         ],
       ),
@@ -288,11 +288,11 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     String confirmPassword,
   ) async {
     if (newPassword != confirmPassword) {
-      _showError('Passwords do not match');
+      _showError(context.tr('passwords_not_match'));
       return;
     }
     if (newPassword.length < 6) {
-      _showError('Password must be at least 6 characters');
+      _showError(context.tr('password_min_length'));
       return;
     }
     try {
@@ -305,13 +305,13 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       await user.reauthenticateWithCredential(credential);
       await user.updatePassword(newPassword);
       if (!mounted) return;
-      _showSuccess('Password changed successfully!');
+      _showSuccess(context.tr('password_changed'));
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      _showError(e.message ?? 'Error changing password.');
+      _showError(e.message ?? context.tr('error_changing_password'));
     } catch (e) {
       if (!mounted) return;
-      _showError('Error changing password: $e');
+      _showError('${context.tr('error_changing_password')}: $e');
     }
   }
 
@@ -359,7 +359,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, 'Settings'),
+      appBar: departmentAppBar(context, context.tr('settings')),
       drawer: departmentDrawer(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -395,9 +395,9 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Settings',
-                          style: TextStyle(
+                        Text(
+                          context.tr('settings'),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -405,7 +405,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          user?.email ?? 'Department Admin',
+                          user?.email ?? context.tr('department'),
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -420,26 +420,26 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
             const SizedBox(height: 24),
 
             // ── Account Settings ────────────────────────────────────
-            _sectionTitle('Account Settings', Icons.person_outline),
+            _sectionTitle(context.tr('account_settings'), Icons.person_outline),
             const SizedBox(height: 10),
             _card(
               children: [
-                _label('Display Name'),
+                _label(context.tr('display_name')),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _displayNameController,
                   decoration: _inputDeco(
-                    'Enter your display name',
+                    context.tr('enter_display_name'),
                     Icons.badge_outlined,
                   ),
                 ),
                 const SizedBox(height: 14),
-                _label('Email'),
+                _label(context.tr('current_email')),
                 const SizedBox(height: 8),
                 TextField(
                   enabled: false,
                   controller: TextEditingController(
-                    text: user?.email ?? 'No email',
+                    text: user?.email ?? context.tr('current_email'),
                   ),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(
@@ -463,7 +463,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                   children: [
                     Expanded(
                       child: _outlineButton(
-                        label: 'Change Email',
+                        label: context.tr('change_email'),
                         icon: Icons.email,
                         color: const Color(0xFF2563EB),
                         onTap: _changeEmail,
@@ -472,7 +472,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _outlineButton(
-                        label: 'Change Password',
+                        label: context.tr('change_password'),
                         icon: Icons.lock_outline,
                         color: const Color(0xFF7C3AED),
                         onTap: _changePassword,
@@ -482,7 +482,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                 ),
                 const SizedBox(height: 14),
                 _saveButton(
-                  label: 'Save Profile',
+                  label: context.tr('save_profile'),
                   isLoading: _isLoadingProfile,
                   onPressed: _saveProfile,
                 ),
@@ -491,123 +491,143 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
             const SizedBox(height: 20),
 
             // ── App Settings ────────────────────────────────────────
-            _sectionTitle('App Settings', Icons.tune_outlined),
+            _sectionTitle(context.tr('app_settings'), Icons.tune_outlined),
             const SizedBox(height: 10),
             _card(
               children: [
-                Row(
-                  children: [
-                    _iconBox(Icons.language, const Color(0xFF2563EB)),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Language',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    DropdownButton<String>(
-                      value: _selectedLanguage,
-                      underline: const SizedBox(),
-                      borderRadius: BorderRadius.circular(10),
-                      items: ['English', 'French', 'Arabic']
-                          .map(
-                            (l) => DropdownMenuItem(value: l, child: Text(l)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _selectedLanguage = v!),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    _iconBox(
-                      Icons.notifications_outlined,
-                      const Color(0xFF16A34A),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                // ── Language Selector ──────────────────────────────
+                Consumer<LocaleProvider>(
+                  builder: (context, localeProvider, _) => Column(
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            'Notifications',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                          _iconBox(Icons.language, const Color(0xFF2563EB)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              context.tr('language'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
                             ),
                           ),
-                          Text(
-                            'Receive alerts and updates',
-                            style: TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 12,
+                          DropdownButton<String>(
+                            value: localeProvider.languageCode,
+                            underline: const SizedBox(),
+                            borderRadius: BorderRadius.circular(10),
+                            items: LocaleProvider.languageOptions.entries
+                                .map(
+                                  (entry) => DropdownMenuItem(
+                                    value: entry.key,
+                                    child: Text(entry.value),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) async {
+                              if (value != null) {
+                                await localeProvider.setLocale(value);
+                                if (!context.mounted) return;
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      Row(
+                        children: [
+                          _iconBox(
+                            Icons.notifications_outlined,
+                            const Color(0xFF16A34A),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('notifications'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                Text(
+                                  context.tr('receive_alerts'),
+                                  style: const TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _notificationsEnabled,
+                            onChanged: (v) =>
+                                setState(() => _notificationsEnabled = v),
+                            thumbColor: WidgetStateProperty.resolveWith<Color>(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.grey,
+                            ),
+                            trackColor: WidgetStateProperty.resolveWith<Color>(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? const Color(0xFF2563EB).withOpacity(0.4)
+                                  : Colors.grey.withOpacity(0.3),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Switch(
-                      value: _notificationsEnabled,
-                      onChanged: (v) =>
-                          setState(() => _notificationsEnabled = v),
-                      thumbColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => states.contains(WidgetState.selected)
-                            ? const Color(0xFF2563EB)
-                            : Colors.grey,
-                      ),
-                      trackColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => states.contains(WidgetState.selected)
-                            ? const Color(0xFF2563EB).withOpacity(0.4)
-                            : Colors.grey.withOpacity(0.3),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    _iconBox(Icons.dark_mode_outlined, const Color(0xFF374151)),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const Divider(height: 24),
+                      Row(
                         children: [
-                          Text(
-                            'Dark Mode',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
+                          _iconBox(
+                            Icons.dark_mode_outlined,
+                            const Color(0xFF374151),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  context.tr('dark_mode'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                Text(
+                                  context.tr('switch_dark_theme'),
+                                  style: const TextStyle(
+                                    color: Color(0xFF9CA3AF),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            'Switch to dark theme',
-                            style: TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 12,
+                          Switch(
+                            value: _darkModeEnabled,
+                            onChanged: (v) =>
+                                setState(() => _darkModeEnabled = v),
+                            thumbColor: WidgetStateProperty.resolveWith<Color>(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.grey,
+                            ),
+                            trackColor: WidgetStateProperty.resolveWith<Color>(
+                              (states) => states.contains(WidgetState.selected)
+                                  ? const Color(0xFF2563EB).withOpacity(0.4)
+                                  : Colors.grey.withOpacity(0.3),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Switch(
-                      value: _darkModeEnabled,
-                      onChanged: (v) => setState(() => _darkModeEnabled = v),
-                      thumbColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => states.contains(WidgetState.selected)
-                            ? const Color(0xFF2563EB)
-                            : Colors.grey,
-                      ),
-                      trackColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => states.contains(WidgetState.selected)
-                            ? const Color(0xFF2563EB).withOpacity(0.4)
-                            : Colors.grey.withOpacity(0.3),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -615,18 +635,18 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
 
             // ── Department Settings ─────────────────────────────────
             _sectionTitle(
-              'Department Settings',
+              context.tr('department_settings'),
               Icons.account_balance_outlined,
             ),
             const SizedBox(height: 10),
             _card(
               children: [
-                _label('University Name'),
+                _label(context.tr('university_name')),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _universityNameController,
                   decoration: _inputDeco(
-                    'Enter university name',
+                    context.tr('enter_university_name'),
                     Icons.school_outlined,
                   ),
                 ),
@@ -637,7 +657,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _label('Academic Year'),
+                          _label(context.tr('academic_year')),
                           const SizedBox(height: 6),
                           _dropdown(
                             value: _selectedAcademicYear,
@@ -653,7 +673,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _label('Semester'),
+                          _label(context.tr('semester')),
                           const SizedBox(height: 6),
                           _dropdown(
                             value: _selectedSemester,
@@ -668,7 +688,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                 ),
                 const SizedBox(height: 14),
                 _saveButton(
-                  label: 'Save Department Settings',
+                  label: context.tr('save_department_settings'),
                   isLoading: _isLoadingDepartment,
                   onPressed: _saveDepartmentSettings,
                   color: const Color(0xFF004AC6),
@@ -678,15 +698,18 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
             const SizedBox(height: 20),
 
             // ── About ───────────────────────────────────────────────
-            _sectionTitle('About', Icons.info_outline),
+            _sectionTitle(context.tr('about'), Icons.info_outline),
             const SizedBox(height: 10),
             _card(
               children: [
-                _infoRow('App Version', '1.0.0'),
+                _infoRow(context.tr('app_version'), '1.0.0'),
                 const Divider(height: 20),
-                _infoRow('Build', 'Hodoori Smart Attendance'),
+                _infoRow(
+                  context.tr('build'),
+                  context.tr('hodoori_smart_attendance'),
+                ),
                 const Divider(height: 20),
-                _infoRow('Developer', 'Academic Team'),
+                _infoRow(context.tr('developer'), context.tr('academic_team')),
               ],
             ),
             const SizedBox(height: 30),

@@ -6,6 +6,7 @@ import 'package:test/models/subject_model.dart';
 import 'package:test/models/teacher_model.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
+import 'package:test/helpers/localization_helper.dart';
 
 class ViewTeachers extends StatelessWidget {
   const ViewTeachers({super.key});
@@ -20,19 +21,19 @@ class ViewTeachers extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Delete teacher?'),
+          title: Text(context.tr('delete')),
           content: Text(
-            'Delete ${teacher.fullName}? This action cannot be undone.',
+            '${context.tr('delete')} ${teacher.fullName}? ${context.tr('error')}',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(context.tr('cancel')),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: Text(context.tr('delete')),
             ),
           ],
         );
@@ -45,13 +46,13 @@ class ViewTeachers extends StatelessWidget {
       await context.read<StudentManagementProvider>().deleteTeacher(teacher.id);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Teacher deleted successfully.')),
+        SnackBar(content: Text(context.tr('success'))),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to delete teacher: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${context.tr('error')}: $e')),
+      );
     }
   }
 
@@ -69,7 +70,7 @@ class ViewTeachers extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, 'View Teachers'),
+      appBar: departmentAppBar(context, context.tr('teachers')),
       drawer: departmentDrawer(context),
       body: StreamBuilder<List<TeacherModel>>(
         stream: context.read<StudentManagementProvider>().watchTeachers(),
@@ -82,17 +83,17 @@ class ViewTeachers extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Text('Failed to load teachers: ${snapshot.error}'),
+                child: Text('${context.tr('error')}: ${snapshot.error}'),
               ),
             );
           }
 
           final teachers = snapshot.data ?? const <TeacherModel>[];
           if (teachers.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'No teachers found.',
-                style: TextStyle(color: Color(0xFF667085)),
+                context.tr('loading'),
+                style: const TextStyle(color: Color(0xFF667085)),
               ),
             );
           }
@@ -119,7 +120,7 @@ class ViewTeachers extends StatelessWidget {
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      '${teacher.email}\nSubjects: ${teacher.subjectIds.length} • Groups: ${teacher.groupIds.length}',
+                      '${teacher.email}\n${context.tr('subjects')}: ${teacher.subjectIds.length} • ${context.tr('classes')}: ${teacher.groupIds.length}',
                     ),
                   ),
                   trailing: Wrap(
@@ -128,7 +129,7 @@ class ViewTeachers extends StatelessWidget {
                       IconButton(
                         onPressed: () => _showEditDialog(context, teacher),
                         icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Edit',
+                        tooltip: context.tr('edit'),
                       ),
                       IconButton(
                         onPressed: () => _confirmDelete(context, teacher),
@@ -136,7 +137,7 @@ class ViewTeachers extends StatelessWidget {
                           Icons.delete_outline,
                           color: Colors.red,
                         ),
-                        tooltip: 'Delete',
+                        tooltip: context.tr('delete'),
                       ),
                     ],
                   ),
@@ -189,7 +190,7 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit Teacher'),
+      title: Text(context.tr('edit')),
       content: SizedBox(
         width: 460,
         child: Form(
@@ -200,13 +201,13 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('display_name'),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     if ((value ?? '').trim().isEmpty) {
-                      return 'Name is required';
+                      return context.tr('field_required');
                     }
                     return null;
                   },
@@ -215,26 +216,28 @@ class _EditTeacherDialogState extends State<_EditTeacherDialog> {
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('email'),
+                    border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
                     final email = (value ?? '').trim();
-                    if (email.isEmpty) return 'Email is required';
+                    if (email.isEmpty) return context.tr('field_required');
                     if (!RegExp(
                       r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
                     ).hasMatch(email)) {
-                      return 'Enter a valid email';
+                      return context.tr('invalid_email');
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 14),
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: context.isRtl
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: Text(
-                    'Subjects',
+                    context.tr('subjects'),
                     style: TextStyle(
                       color: Colors.grey.shade800,
                       fontWeight: FontWeight.bold,

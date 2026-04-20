@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
+import 'package:test/helpers/localization_helper.dart';
 import 'departement/AddStudent.dart';
 import 'package:test/pages/departement/AddSubject.dart';
 import 'package:test/pages/departement/AddTeacher.dart';
@@ -28,9 +29,10 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentManagementProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, "Academic Curator - $universityName"),
+      appBar: departmentAppBar(context, context.tr('dashboard')),
       drawer: departmentDrawer(context),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -45,11 +47,13 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: context.isRtl
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Systems Overview",
-                    style: TextStyle(
+                  Text(
+                    context.tr('dashboard'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -65,14 +69,14 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                     children: [
                       ElevatedButton(
                         onPressed: () {},
-                        child: const Text("Generate Report"),
+                        child: Text(context.tr('report')),
                       ),
                       const SizedBox(width: 10),
                       TextButton(
                         onPressed: () {},
-                        child: const Text(
-                          "View Audit Log",
-                          style: TextStyle(color: Colors.white),
+                        child: Text(
+                          context.tr('filter'),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ],
@@ -101,16 +105,22 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                     return Row(
                       children: [
                         Expanded(
-                          child: _statCard("Students", totalStudents.toString()),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statCard("Teachers", teachers.length.toString()),
+                          child: _statCard(
+                            context.tr('students'),
+                            totalStudents.toString(),
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: _statCard(
-                            "Attendance",
+                            context.tr('teachers'),
+                            teachers.length.toString(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statCard(
+                            context.tr('attendance'),
                             "${attendance.toStringAsFixed(1)}%",
                           ),
                         ),
@@ -121,9 +131,9 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               },
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Weekly Trends",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            Text(
+              context.tr('attendance'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             StreamBuilder(
@@ -132,9 +142,11 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                 final students = snapshot.data ?? const [];
                 final attendance = students.isEmpty
                     ? 0.0
-                    : students
-                            .fold<int>(0, (sum, s) => sum + s.attendancePercentage) /
-                        students.length;
+                    : students.fold<int>(
+                            0,
+                            (sum, s) => sum + s.attendancePercentage,
+                          ) /
+                          students.length;
                 final trend = [
                   (attendance * 0.6).clamp(0, 100),
                   (attendance * 0.75).clamp(0, 100),
@@ -149,108 +161,52 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               },
             ),
             const SizedBox(height: 30),
-            // Quick Actions Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Quick Actions",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddStudent(),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: Text(context.tr('students')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Navigate to Add Student
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddStudent(),
-                                ),
-                              );
-                            });
-                          },
-                          icon: const Icon(Icons.person_add),
-                          label: const Text("Add Student"),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddTeacher(),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Navigate to Add Teacher
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddTeacher(),
-                                ),
-                              );
-                            });
-                          },
-                          icon: const Icon(Icons.school),
-                          label: const Text("Add Teacher"),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: Text(context.tr('teachers')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Navigate to Add Subject
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddSubject(),
-                                ),
-                              );
-                            });
-                          },
-                          icon: const Icon(Icons.subject),
-                          label: const Text("Add Subject"),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddSubject(),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // Generate Report action
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Generating Report..."),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.description),
-                          label: const Text("Generate Report"),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
+                    icon: const Icon(Icons.add),
+                    label: Text(context.tr('subjects')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -258,24 +214,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Dashboard",
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: "Classes"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: "Requests",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: "Settings",
-          ),
-        ],
-      ),
+      bottomNavigationBar: departmentBottomNav(context, 0),
     );
   }
 
@@ -285,31 +224,44 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+        ],
       ),
       child: Column(
         children: [
-          Text(title, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 5),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF9CA3AF),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _bar(double height) {
-    return Container(
-      width: 20,
-      height: 100,
-      alignment: Alignment.bottomCenter,
+  Widget _bar(double value) {
+    return Expanded(
       child: Container(
-        height: height,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: const Color(0xFF2563EB),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
         ),
+        height: (value * 1.5).clamp(20, 200).toDouble(),
       ),
     );
   }

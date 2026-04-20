@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/models/justification_model.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
+import 'package:test/helpers/localization_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class VewJustification extends StatelessWidget {
@@ -17,9 +18,9 @@ class VewJustification extends StatelessWidget {
         elevation: 0,
         backgroundColor: const Color(0xFFF8F9FB),
         foregroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Justification Requests',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        title: Text(
+          context.tr('justification_requests'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
       body: SafeArea(
@@ -28,9 +29,9 @@ class VewJustification extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Justification Requests',
-                style: TextStyle(
+              Text(
+                context.tr('justification_requests'),
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A1A1A),
@@ -45,7 +46,7 @@ class VewJustification extends StatelessWidget {
                       .where((j) => j.status == 'submitted')
                       .length;
                   return Text(
-                    '$pending pending requests',
+                    '$pending ${context.tr('pending_requests')}',
                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   );
                 },
@@ -59,13 +60,17 @@ class VewJustification extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
+                      return Center(
+                        child: Text(
+                          '${context.tr('error')}: ${snapshot.error}',
+                        ),
+                      );
                     }
 
                     final items = snapshot.data ?? const <JustificationModel>[];
                     if (items.isEmpty) {
-                      return const Center(
-                        child: Text('No justifications found.'),
+                      return Center(
+                        child: Text(context.tr('no_justifications')),
                       );
                     }
 
@@ -102,7 +107,7 @@ class VewJustification extends StatelessWidget {
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Justification accepted')),
+              SnackBar(content: Text(context.tr('accept_justification'))),
             );
           }
         },
@@ -117,7 +122,7 @@ class VewJustification extends StatelessWidget {
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Justification refused')),
+              SnackBar(content: Text(context.tr('refuse_justification'))),
             );
           }
         },
@@ -149,10 +154,10 @@ class _JustificationCard extends StatelessWidget {
       _ => Colors.orange,
     };
     final statusLabel = switch (status) {
-      'accepted' => 'ACCEPTED',
-      'refused' => 'REFUSED',
-      'submitted' => 'SUBMITTED',
-      _ => 'PENDING',
+      'accepted' => context.tr('accepted'),
+      'refused' => context.tr('refused'),
+      'submitted' => context.tr('submitted'),
+      _ => context.tr('pending'),
     };
 
     return Container(
@@ -223,7 +228,10 @@ class _JustificationCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF2563EB).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -286,7 +294,7 @@ class _JustificationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Absence: ${item.absenceDate.toIso8601String().split('T').first}',
+                      '${context.tr('absence_date')}: ${item.absenceDate.toIso8601String().split('T').first}',
                       style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
@@ -297,7 +305,7 @@ class _JustificationCard extends StatelessWidget {
                     Icon(Icons.send, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 8),
                     Text(
-                      'Submitted: ${item.createdAt.toIso8601String().split('T').first}',
+                      '${context.tr('submitted_date')}: ${item.createdAt.toIso8601String().split('T').first}',
                       style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
@@ -359,19 +367,24 @@ class _JustificationDetailsDialogState
               Row(
                 children: [
                   Text(
-                    'Level: ${widget.item.levelName ?? 'Unknown Level'}',
+                    '${context.tr('level')}: ${widget.item.levelName ?? 'Unknown Level'}',
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(width: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2563EB).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.3)),
+                      border: Border.all(
+                        color: const Color(0xFF2563EB).withOpacity(0.3),
+                      ),
                     ),
                     child: Text(
-                      'Group: ${widget.item.groupName ?? 'Unknown Group'}',
+                      '${context.tr('group')}: ${widget.item.groupName ?? 'Unknown Group'}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2563EB),
@@ -385,31 +398,31 @@ class _JustificationDetailsDialogState
               Text('${widget.item.subject} • ${widget.item.teacherName}'),
               const SizedBox(height: 8),
               Text(
-                'Absence date: ${widget.item.absenceDate.toIso8601String().split('T').first}',
+                '${context.tr('absence_date')}: ${widget.item.absenceDate.toIso8601String().split('T').first}',
               ),
               const SizedBox(height: 8),
               Text(
-                'Submitted: ${widget.item.createdAt.toIso8601String().split('T').first}',
+                '${context.tr('submitted_date')}: ${widget.item.createdAt.toIso8601String().split('T').first}',
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Reason',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              Text(
+                context.tr('reason'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(widget.item.reason ?? 'No reason provided.'),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Text(
-                    'Attachment',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                  Text(
+                    context.tr('attachment'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
                   TextButton.icon(
                     onPressed: _openFile,
                     icon: const Icon(Icons.open_in_new),
-                    label: const Text('View file'),
+                    label: Text(context.tr('view_file')),
                   ),
                 ],
               ),
@@ -417,9 +430,9 @@ class _JustificationDetailsDialogState
               TextField(
                 controller: _refusalReasonController,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Refusal reason (optional)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.tr('refusal_reason'),
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -429,7 +442,7 @@ class _JustificationDetailsDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text(context.tr('close')),
         ),
         if (widget.item.status.toLowerCase() == 'submitted') ...[
           TextButton(
@@ -444,11 +457,11 @@ class _JustificationDetailsDialogState
                       if (mounted) setState(() => _isRejecting = false);
                     }
                   },
-            child: const Text('Refuse'),
+            child: Text(context.tr('refuse')),
           ),
           ElevatedButton(
             onPressed: _isRejecting ? null : widget.onApprove,
-            child: const Text('Accept'),
+            child: Text(context.tr('accept')),
           ),
         ],
       ],

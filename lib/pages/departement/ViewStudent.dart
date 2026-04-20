@@ -4,6 +4,7 @@ import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/groups_screen.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'package:test/pages/departement/widgets/hierarchy_item_card.dart';
+import 'package:test/helpers/localization_helper.dart';
 
 /// First hierarchy level screen: Levels (L1, L2, L3, M1, M2).
 class ViewStudent extends StatelessWidget {
@@ -15,15 +16,17 @@ class ViewStudent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, 'Student Management - Levels'),
+      appBar: departmentAppBar(context, context.tr('students')),
       drawer: departmentDrawer(context),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: context.isRtl
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(
-              'Choose a level to explore groups and students',
+              context.tr('filter'),
               style: TextStyle(fontSize: 15, color: Colors.grey.shade700),
             ),
             const SizedBox(height: 14),
@@ -38,7 +41,7 @@ class ViewStudent extends StatelessWidget {
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
-                        'Could not load levels. Please check your connection and try again.',
+                        context.tr('error'),
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey.shade700),
                       ),
@@ -49,7 +52,7 @@ class ViewStudent extends StatelessWidget {
                   if (levels.isEmpty) {
                     return Center(
                       child: Text(
-                        'No levels found yet.',
+                        context.tr('loading'),
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     );
@@ -62,7 +65,7 @@ class ViewStudent extends StatelessWidget {
 
                       return HierarchyItemCard(
                         title: level.name,
-                        subtitle: 'Tap to view available groups',
+                        subtitle: context.tr('filter'),
                         leadingIcon: Icons.school_rounded,
                         onTap: () => Navigator.pushNamed(
                           context,

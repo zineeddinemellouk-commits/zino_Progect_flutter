@@ -11,6 +11,7 @@ import 'ViewSubjects.dart';
 // ✅ removed: import 'package:test/pages/login_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
+import 'package:test/helpers/localization_helper.dart';
 
 Future<void> _logoutFromDepartment(BuildContext context) async {
   try {
@@ -115,27 +116,27 @@ Drawer departmentDrawer(BuildContext context) {
                 colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
               ),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Text(
-                  'Academic Curator',
-                  style: TextStyle(
+                  context.tr('app_name'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'Department Portal',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  context.tr('app_subtitle'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
           ),
-          _drawerItem(context, Icons.home, "Home", () {
+          _drawerItem(context, Icons.home, context.tr('dashboard'), () {
             Navigator.pop(context);
             Navigator.pushReplacement(
               context,
@@ -144,46 +145,46 @@ Drawer departmentDrawer(BuildContext context) {
               ),
             );
           }),
-          _drawerItem(context, Icons.person_add, "Add Student", () {
+          _drawerItem(context, Icons.person_add, context.tr('add'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddStudent()),
             );
           }),
-          _drawerItem(context, Icons.school, "Add Teacher", () {
+          _drawerItem(context, Icons.school, context.tr('teachers'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddTeacher()),
             );
           }),
-          _drawerItem(context, Icons.subject, "Add Subject", () {
+          _drawerItem(context, Icons.subject, context.tr('subjects'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AddSubject()),
             );
           }),
-          _drawerItem(context, Icons.people, "View Students", () {
+          _drawerItem(context, Icons.people, context.tr('students'), () {
             Navigator.pop(context);
             Navigator.pushNamed(context, ViewStudent.routeName);
           }),
-          _drawerItem(context, Icons.badge, "View Teachers", () {
+          _drawerItem(context, Icons.badge, context.tr('teachers'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ViewTeachers()),
             );
           }),
-          _drawerItem(context, Icons.book, "View Subjects", () {
+          _drawerItem(context, Icons.book, context.tr('subjects'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ViewSubjects()),
             );
           }),
-          _drawerItem(context, Icons.visibility, "View Justification", () {
+          _drawerItem(context, Icons.visibility, context.tr('attendance'), () {
             Navigator.pop(context);
             Navigator.push(
               context,
@@ -191,7 +192,7 @@ Drawer departmentDrawer(BuildContext context) {
             );
           }),
           const Divider(height: 20),
-          _drawerItem(context, Icons.logout, "Logout", () {
+          _drawerItem(context, Icons.logout, context.tr('cancel'), () {
             Navigator.pop(context);
             _logoutFromDepartment(context);
           }),
@@ -241,22 +242,28 @@ Widget departmentBottomNav(BuildContext context, int currentIndex) {
       selectedItemColor: Colors.white,
       unselectedItemColor: Colors.white70,
       type: BottomNavigationBarType.fixed,
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: "Dashboard",
+          icon: const Icon(Icons.dashboard),
+          label: context.tr('dashboard'),
         ),
-        BottomNavigationBarItem(icon: Icon(Icons.school), label: "Classes"),
         BottomNavigationBarItem(
-          icon: Icon(Icons.assignment),
-          label: "Requests",
+          icon: const Icon(Icons.school),
+          label: context.tr('classes'),
         ),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.assignment),
+          label: context.tr('attendance'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.settings),
+          label: context.tr('settings'),
+        ),
       ],
       onTap: (index) {
         switch (index) {
           case 0:
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const DepartmentDashboard(),
@@ -264,16 +271,19 @@ Widget departmentBottomNav(BuildContext context, int currentIndex) {
             );
             break;
           case 1:
-            Navigator.pushReplacementNamed(context, ViewStudent.routeName);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ViewStudent()),
+            );
             break;
           case 2:
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const VewJustification()),
             );
             break;
           case 3:
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const DepartmentSettingsPage(),

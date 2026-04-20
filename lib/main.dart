@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,17 +20,23 @@ import 'package:test/pages/role_home_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test/providers/locale_provider.dart';
+import 'package:test/services/localization_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Initialize Supabase
   await Supabase.initialize(
     url: 'https://ybpmzffutavfwcbfkjcq.supabase.co', // ← PASTE YOUR URL HERE
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicG16ZmZ1dGF2ZndjYmZramNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTYyMTMsImV4cCI6MjA5MjA5MjIxM30.7wB2kJww59dpgU751hzIyGE4R0SPPwatcH6Hx34fflU', // ← PASTE YOUR ANON KEY HERE
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicG16ZmZ1dGF2ZndjYmZramNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTYyMTMsImV4cCI6MjA5MjA5MjIxM30.7wB2kJww59dpgU751hzIyGE4R0SPPwatcH6Hx34fflU', // ← PASTE YOUR ANON KEY HERE
   );
-  
+
+  // Initialize localization service
+  await LocalizationService.init();
+
   runApp(const MyApp());
 }
 
@@ -38,59 +45,91 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => StudentManagementProvider(),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Hodoori - Smart Attendance',
-        theme: ThemeData(
-          useMaterial3: true,
-          fontFamily: 'Inter',
-          brightness: Brightness.light,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => StudentManagementProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
+      ],
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) => MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Hodoori - Smart Attendance',
+          theme: ThemeData(
+            useMaterial3: true,
+            fontFamily: 'Inter',
+            brightness: Brightness.light,
+          ),
+          locale: localeProvider.currentLocale,
+          supportedLocales: LocaleProvider.supportedLocales,
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          localeResolutionCallback: (locale, supportedLocales) {
+            if (locale == null) {
+              return supportedLocales.first;
+            }
+            for (var supportedLocale in supportedLocales) {
+              if (supportedLocale.languageCode == locale.languageCode) {
+                return supportedLocale;
+              }
+            }
+            return supportedLocales.first;
+          },
+          builder: (context, child) {
+            return Directionality(
+              textDirection: localeProvider.isRtl
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              child: child ?? const SizedBox(),
+            );
+          },
+          initialRoute: '/login',
+          routes: {
+            '/login': (_) => const HodooriLoginScreen(),
+            '/': (_) => const LoginPage(),
+            ViewStudent.routeName: (_) => const ViewStudent(),
+            DepartmentSettingsPage.routeName: (_) =>
+                const DepartmentSettingsPage(),
+          },
+          onGenerateRoute: (settings) {
+            if (settings.name == GroupsScreen.routeName) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => const GroupsScreen(),
+              );
+            }
+            if (settings.name == StudentsScreen.routeName) {
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => const StudentsScreen(),
+              );
+            }
+            if (settings.name == TeacherProfilePage.routeName) {
+              final args = settings.arguments as Map<String, String>?;
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => TeacherProfilePage(
+                  teacherId: args?['teacherId'],
+                  teacherEmail: args?['teacherEmail'],
+                ),
+              );
+            }
+            if (settings.name == StudentsPage.routeName) {
+              final args = settings.arguments as Map<String, dynamic>?;
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => StudentsPage(
+                  studentDocumentId: args?['studentDocumentId'] as String?,
+                  studentEmail: args?['studentEmail'] as String?,
+                  selfViewOnly: args?['selfViewOnly'] as bool? ?? false,
+                ),
+              );
+            }
+            return null;
+          },
         ),
-        initialRoute: '/login',
-        routes: {
-          '/login': (_) => const HodooriLoginScreen(),
-          '/': (_) => const LoginPage(),
-          ViewStudent.routeName: (_) => const ViewStudent(),
-          DepartmentSettingsPage.routeName: (_) => const DepartmentSettingsPage(),
-        },
-        onGenerateRoute: (settings) {
-          if (settings.name == GroupsScreen.routeName) {
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => const GroupsScreen(),
-            );
-          }
-          if (settings.name == StudentsScreen.routeName) {
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => const StudentsScreen(),
-            );
-          }
-          if (settings.name == TeacherProfilePage.routeName) {
-            final args = settings.arguments as Map<String, String>?;
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => TeacherProfilePage(
-                teacherId: args?['teacherId'],
-                teacherEmail: args?['teacherEmail'],
-              ),
-            );
-          }
-          if (settings.name == StudentsPage.routeName) {
-            final args = settings.arguments as Map<String, dynamic>?;
-            return MaterialPageRoute(
-              settings: settings,
-              builder: (_) => StudentsPage(
-                studentDocumentId: args?['studentDocumentId'] as String?,
-                studentEmail: args?['studentEmail'] as String?,
-                selfViewOnly: args?['selfViewOnly'] as bool? ?? false,
-              ),
-            );
-          }
-          return null;
-        },
       ),
     );
   }

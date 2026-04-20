@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
+import 'package:test/helpers/localization_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class JustificationPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _JustificationPageState extends State<JustificationPage> {
     try {
       print('[JustificationPage] Starting file picker...');
       print('[JustificationPage] Platform: ${kIsWeb ? 'WEB' : 'NATIVE'}');
-      
+
       // On web, we need withData: true to get bytes; on native, withData: false to get path
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -69,7 +70,7 @@ class _JustificationPageState extends State<JustificationPage> {
           );
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('File size must be less than 5MB')),
+              SnackBar(content: Text(context.tr('file_too_large'))),
             );
           }
           return;
@@ -81,7 +82,7 @@ class _JustificationPageState extends State<JustificationPage> {
             print('[JustificationPage] ERROR: File bytes are null or empty');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Error: Invalid file data')),
+                SnackBar(content: Text(context.tr('invalid_file_data'))),
               );
             }
             return;
@@ -94,7 +95,7 @@ class _JustificationPageState extends State<JustificationPage> {
             print('[JustificationPage] ERROR: File path is null or empty');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Error: Invalid file path')),
+                SnackBar(content: Text(context.tr('invalid_file_path'))),
               );
             }
             return;
@@ -108,7 +109,7 @@ class _JustificationPageState extends State<JustificationPage> {
             );
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Error: File not found')),
+                SnackBar(content: Text(context.tr('file_not_found'))),
               );
             }
             return;
@@ -128,9 +129,9 @@ class _JustificationPageState extends State<JustificationPage> {
     } catch (e) {
       print('[JustificationPage] ERROR picking file: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error picking file: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.tr('pick_file_error')}: $e')),
+        );
       }
     }
   }
@@ -152,9 +153,7 @@ class _JustificationPageState extends State<JustificationPage> {
 
   Future<String?> _uploadFile() async {
     if (_selectedFile == null) {
-      print(
-        '[JustificationPage] ⚠️ ABORT UPLOAD: No file selected',
-      );
+      print('[JustificationPage] ⚠️ ABORT UPLOAD: No file selected');
       return null;
     }
 
@@ -174,7 +173,9 @@ class _JustificationPageState extends State<JustificationPage> {
           throw Exception('Web file bytes are null or empty');
         }
         fileBytes = _selectedFile!.bytes!;
-        print('[JustificationPage]   ✓ Using bytes from web picker (${fileBytes.length} bytes)');
+        print(
+          '[JustificationPage]   ✓ Using bytes from web picker (${fileBytes.length} bytes)',
+        );
       } else {
         // On native platforms, read bytes from file path
         if (_selectedFile!.path == null || _selectedFile!.path!.isEmpty) {
@@ -183,10 +184,14 @@ class _JustificationPageState extends State<JustificationPage> {
         final file = File(_selectedFile!.path!);
         final fileExists = await file.exists();
         if (!fileExists) {
-          throw Exception('Local file does not exist at: ${_selectedFile!.path}');
+          throw Exception(
+            'Local file does not exist at: ${_selectedFile!.path}',
+          );
         }
         fileBytes = await file.readAsBytes();
-        print('[JustificationPage]   ✓ Read ${fileBytes.length} bytes from native path');
+        print(
+          '[JustificationPage]   ✓ Read ${fileBytes.length} bytes from native path',
+        );
       }
 
       // Get authenticated user
@@ -246,9 +251,9 @@ class _JustificationPageState extends State<JustificationPage> {
     if (_selectedReason == null) {
       print('[JustificationPage] ❌ VALIDATION FAILED: No reason selected');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a reason for absence')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.tr('select_reason'))));
       }
       return;
     }
@@ -257,9 +262,9 @@ class _JustificationPageState extends State<JustificationPage> {
     if (_selectedFile == null) {
       print('[JustificationPage] ❌ VALIDATION FAILED: No file selected');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload a supporting document')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.tr('upload_document'))));
       }
       return;
     }
@@ -278,19 +283,32 @@ class _JustificationPageState extends State<JustificationPage> {
 
       // ========== STEP 3: FETCH STUDENT INFORMATION ==========
       print('[JustificationPage] Step 2: Fetching student information...');
-      final studentQuery = await _firestore.collection('students').where('authUid', isEqualTo: currentUser.uid).limit(1).get();
+      final studentQuery = await _firestore
+          .collection('students')
+          .where('authUid', isEqualTo: currentUser.uid)
+          .limit(1)
+          .get();
       if (studentQuery.docs.isEmpty) {
         throw Exception('❌ Student profile not found');
       }
       final studentDoc = studentQuery.docs.first;
       final studentData = studentDoc.data();
-      final studentName = studentData['fullName'] as String? ?? 'Unknown Student';
+      final studentName =
+          studentData['fullName'] as String? ?? 'Unknown Student';
       final levelId = studentData['levelId'] as String? ?? '';
       final groupId = studentData['groupId'] as String? ?? '';
 
       // Resolve level and group names
-      final levelName = await _resolveName(_firestore.collection('levels'), levelId, fallback: levelId);
-      final groupName = await _resolveName(_firestore.collection('groups'), groupId, fallback: groupId);
+      final levelName = await _resolveName(
+        _firestore.collection('levels'),
+        levelId,
+        fallback: levelId,
+      );
+      final groupName = await _resolveName(
+        _firestore.collection('groups'),
+        groupId,
+        fallback: groupId,
+      );
 
       print('[JustificationPage] ✓ Student: $studentName');
       print('[JustificationPage] ✓ Level: $levelName');
@@ -376,10 +394,10 @@ class _JustificationPageState extends State<JustificationPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Justification submitted successfully!'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Color(0xFF12B76A),
+          SnackBar(
+            content: Text(context.tr('submit_success')),
+            duration: const Duration(seconds: 2),
+            backgroundColor: const Color(0xFF12B76A),
           ),
         );
 
@@ -398,18 +416,18 @@ class _JustificationPageState extends State<JustificationPage> {
 
         String errorMessage;
         if (e.toString().contains('object-not-found')) {
-          errorMessage = 'File upload failed. Please try again.';
+          errorMessage = context.tr('upload_file_failed');
         } else if (e.toString().contains('permission-denied')) {
-          errorMessage = 'You do not have permission to submit.';
+          errorMessage = context.tr('permission_denied');
         } else if (e.toString().contains('not authenticated')) {
-          errorMessage = 'Please log in again.';
+          errorMessage = context.tr('please_login');
         } else {
           errorMessage = e.toString();
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $errorMessage'),
+            content: Text('${context.tr('error_submit')}: $errorMessage'),
             duration: const Duration(seconds: 4),
             backgroundColor: const Color(0xFFD92D20),
           ),
@@ -429,9 +447,9 @@ class _JustificationPageState extends State<JustificationPage> {
           icon: const Icon(Icons.arrow_back, color: Color(0xFF4F46E5)),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Submit Justification',
-          style: TextStyle(
+        title: Text(
+          context.tr('submit_justification'),
+          style: const TextStyle(
             color: Color(0xFF4F46E5),
             fontWeight: FontWeight.w700,
             fontSize: 20,
@@ -464,11 +482,11 @@ class _JustificationPageState extends State<JustificationPage> {
             const SizedBox(height: 16),
 
             // Disclaimer
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                'BY SUBMITTING, YOU CONFIRM THE INFORMATION PROVIDED IS ACCURATE AND AUTHENTIC.',
-                style: TextStyle(
+                context.tr('confirmed_accurate'),
+                style: const TextStyle(
                   fontSize: 11,
                   color: Color(0xFF667085),
                   fontWeight: FontWeight.w500,
@@ -495,9 +513,9 @@ class _JustificationPageState extends State<JustificationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ABSENCE DETAILS',
-            style: TextStyle(
+          Text(
+            context.tr('absence_details'),
+            style: const TextStyle(
               color: Color(0xFF98A2B3),
               fontWeight: FontWeight.w700,
               fontSize: 12,
@@ -525,9 +543,9 @@ class _JustificationPageState extends State<JustificationPage> {
                   color: const Color(0xFFFFECEB),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Text(
-                  'UNJUSTIFIED',
-                  style: TextStyle(
+                child: Text(
+                  context.tr('unjustified'),
+                  style: const TextStyle(
                     color: Color(0xFFD92D20),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -565,7 +583,7 @@ class _JustificationPageState extends State<JustificationPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Absence Type: ${widget.absence.courseCode}',
+                '${context.tr('absence_type')}: ${widget.absence.courseCode}',
                 style: const TextStyle(
                   color: Color(0xFF667085),
                   fontSize: 13,
@@ -584,7 +602,7 @@ class _JustificationPageState extends State<JustificationPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Duration: 2 Hours',
+                '${context.tr('duration')}: 2 Hours',
                 style: const TextStyle(
                   color: Color(0xFF667085),
                   fontSize: 13,
@@ -602,9 +620,9 @@ class _JustificationPageState extends State<JustificationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Why were you absent?',
-          style: TextStyle(
+        Text(
+          context.tr('why_absent'),
+          style: const TextStyle(
             color: Color(0xFF1D2939),
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -650,7 +668,7 @@ class _JustificationPageState extends State<JustificationPage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      reason,
+                      context.tr(reason.toLowerCase()),
                       style: TextStyle(
                         color: isSelected
                             ? const Color(0xFF5A4CF0)
@@ -674,9 +692,9 @@ class _JustificationPageState extends State<JustificationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Additional Details',
-          style: TextStyle(
+        Text(
+          context.tr('additional_details'),
+          style: const TextStyle(
             color: Color(0xFF1D2939),
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -688,8 +706,7 @@ class _JustificationPageState extends State<JustificationPage> {
           minLines: 4,
           maxLines: 6,
           decoration: InputDecoration(
-            hintText:
-                'Please describe the circumstances regarding your absence...',
+            hintText: context.tr('describe_absence'),
             hintStyle: const TextStyle(color: Color(0xFFC0C5D0), fontSize: 14),
             filled: true,
             fillColor: const Color(0xFFF0F2F5),
@@ -717,9 +734,9 @@ class _JustificationPageState extends State<JustificationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Supporting Documents',
-          style: TextStyle(
+        Text(
+          context.tr('supporting_documents'),
+          style: const TextStyle(
             color: Color(0xFF1D2939),
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -758,9 +775,9 @@ class _JustificationPageState extends State<JustificationPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Upload medical certificate or notice',
-                        style: TextStyle(
+                      Text(
+                        context.tr('upload_certificate'),
+                        style: const TextStyle(
                           color: Color(0xFF1D2939),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -768,9 +785,9 @@ class _JustificationPageState extends State<JustificationPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'PDF, JPG, or PNG (Max 5MB)',
-                        style: TextStyle(
+                      Text(
+                        context.tr('file_format'),
+                        style: const TextStyle(
                           color: Color(0xFF98A2B3),
                           fontSize: 12,
                         ),
@@ -845,9 +862,9 @@ class _JustificationPageState extends State<JustificationPage> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Submit Justification',
-                style: TextStyle(
+            : Text(
+                context.tr('submit_justification'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -875,7 +892,11 @@ class _JustificationPageState extends State<JustificationPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  Future<String> _resolveName(CollectionReference collection, String id, {required String fallback}) async {
+  Future<String> _resolveName(
+    CollectionReference collection,
+    String id, {
+    required String fallback,
+  }) async {
     if (id.trim().isEmpty) return fallback;
     final snap = await collection.doc(id).get();
     if (snap.exists) {

@@ -66,20 +66,6 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {},
-                tooltip: 'Notifications',
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () => _logoutFromDepartment(context),
                 tooltip: 'Logout',

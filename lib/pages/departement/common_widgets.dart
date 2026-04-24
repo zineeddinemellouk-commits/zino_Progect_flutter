@@ -34,6 +34,7 @@ PreferredSizeWidget departmentAppBar(
   BuildContext context,
   String title, {
   bool showBackButton = false,
+  Widget? customLeading,
 }) {
   return PreferredSize(
     preferredSize: const Size.fromHeight(70),
@@ -59,17 +60,19 @@ PreferredSizeWidget departmentAppBar(
             color: Colors.white,
           ),
         ),
-        leading: showBackButton
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu, color: Colors.white),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
+        leading:
+            customLeading ??
+            (showBackButton
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  )
+                : Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Colors.white),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                    ),
+                  )),
       ),
     ),
   );

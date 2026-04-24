@@ -95,8 +95,7 @@ class StudentsScreen extends StatelessWidget {
     if (rawArgs is! StudentsScreenArgs) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FB),
-        appBar: departmentAppBar(context, 'Students'),
-        drawer: departmentDrawer(context),
+        appBar: departmentAppBar(context, 'Students', showBackButton: true),
         body: Center(
           child: Text(
             'Unable to open students: invalid group data.',
@@ -113,6 +112,7 @@ class StudentsScreen extends StatelessWidget {
       appBar: departmentAppBar(
         context,
         'Students - ${args.level.name} / ${args.group.name}',
+        showBackButton: true,
       ),
       drawer: departmentDrawer(context),
       body: Padding(

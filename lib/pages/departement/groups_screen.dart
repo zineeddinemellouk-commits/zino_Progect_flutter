@@ -74,7 +74,9 @@ class GroupsScreen extends StatelessWidget {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Group added successfully.'),
+                                      content: Text(
+                                        'Group added successfully.',
+                                      ),
                                     ),
                                   );
                                 }
@@ -123,8 +125,7 @@ class GroupsScreen extends StatelessWidget {
     if (args is! LevelModel) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FB),
-        appBar: departmentAppBar(context, 'Groups'),
-        drawer: departmentDrawer(context),
+        appBar: departmentAppBar(context, 'Groups', showBackButton: true),
         body: Center(
           child: Text(
             'Unable to open groups: invalid level data.',
@@ -138,7 +139,11 @@ class GroupsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, 'Groups - ${level.name}'),
+      appBar: departmentAppBar(
+        context,
+        'Groups - ${level.name}',
+        showBackButton: true,
+      ),
       drawer: departmentDrawer(context),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -154,7 +159,7 @@ class GroupsScreen extends StatelessWidget {
               child: StreamBuilder(
                 stream: context
                     .read<StudentManagementProvider>()
-                  .watchGroupsByLevel(levelId: level.id),
+                    .watchGroupsByLevel(levelId: level.id),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());

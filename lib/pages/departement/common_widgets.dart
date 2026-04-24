@@ -30,7 +30,11 @@ Future<void> _logoutFromDepartment(BuildContext context) async {
   }
 }
 
-PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
+PreferredSizeWidget departmentAppBar(
+  BuildContext context,
+  String title, {
+  bool showBackButton = false,
+}) {
   return PreferredSize(
     preferredSize: const Size.fromHeight(70),
     child: Container(
@@ -47,39 +51,25 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
       child: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () => _logoutFromDepartment(context),
-                tooltip: 'Logout',
-              ),
-            ),
-          ],
-        ),
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        leading: showBackButton
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
       ),
     ),
   );

@@ -484,7 +484,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildLogoSection(),
-          const SizedBox(height: 50),
+          const SizedBox(height: 32),
           _buildLoginCard(),
         ],
       ),
@@ -503,15 +503,15 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
             child: Opacity(opacity: value, child: child),
           ),
           child: SizedBox(
-            width: 400,
-            height: 400,
+            width: 200,
+            height: 200,
             child: Image.asset(
               'assets/l10n/images/logo_hodori.png',
               fit: BoxFit.contain,
             ),
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 8),
         TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: 1),
           duration: const Duration(milliseconds: 1400),
@@ -532,7 +532,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         const Text(
           'Smart University Attendance',
           style: TextStyle(
@@ -580,7 +580,6 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
                   color: const Color(0xFF1F3A93).withOpacity(0.12),
                   blurRadius: 40,
                   offset: const Offset(0, 20),
-
                 ),
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -595,26 +594,6 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome back',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1F3A93),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Please enter your credentials',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
                   // Role selector
                   _buildRoleSelector(),
                   const SizedBox(height: 30),
@@ -658,30 +637,6 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
                   // Login button
                   _buildLoginButton(),
                   const SizedBox(height: 20),
-
-                  // Sign up
-                  Center(
-                    child: RichText(
-                      text: const TextSpan(
-                        text: "Don't have an account? ",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: 'Sign up',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF2563EB),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

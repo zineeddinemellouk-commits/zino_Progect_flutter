@@ -221,7 +221,9 @@ class ViewSubjects extends StatelessWidget {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Subject updated successfully.'),
+                                    content: Text(
+                                      'Subject updated successfully.',
+                                    ),
                                   ),
                                 );
                               }
@@ -233,7 +235,9 @@ class ViewSubjects extends StatelessWidget {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Failed to update subject: $e'),
+                                    content: Text(
+                                      'Failed to update subject: $e',
+                                    ),
                                   ),
                                 );
                               }
@@ -262,6 +266,248 @@ class ViewSubjects extends StatelessWidget {
     nameController.dispose();
   }
 
+  void _showSubjectDetailSheet(
+    BuildContext context,
+    SubjectModel subject,
+    TeacherModel? teacher,
+    List<ClassModel> assignedClasses,
+  ) {
+    final initials = subject.name.isNotEmpty
+        ? subject.name[0].toUpperCase()
+        : '';
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF2563EB),
+              const Color(0xFF004AC6),
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+            stops: const [0, 0.25, 0.25],
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header with avatar and subject info
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                child: Column(
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      subject.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${assignedClasses.length} class${assignedClasses.length != 1 ? 'es' : ''} assigned',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Container(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Assigned Classes section
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                      child: Text(
+                        'ASSIGNED CLASSES',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    if (assignedClasses.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          'No classes assigned',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            for (
+                              int i = 0;
+                              i < assignedClasses.length;
+                              i++
+                            ) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey[300]!,
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.class_outlined,
+                                      color: const Color(0xFF2563EB),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            assignedClasses[i].name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            teacher?.fullName ?? 'Unassigned',
+                                            style: TextStyle(
+                                              color: teacher != null
+                                                  ? Colors.grey[600]
+                                                  : const Color(0xFFF59E0B),
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (i < assignedClasses.length - 1)
+                                const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    // Action buttons
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showEditDialog(context, subject);
+                              },
+                              icon: const Icon(Icons.edit_outlined),
+                              label: const Text('Edit Subject'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF2563EB),
+                                side: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _confirmDelete(context, subject);
+                              },
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(
+                                  color: Colors.red,
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -288,10 +534,30 @@ class ViewSubjects extends StatelessWidget {
 
           final subjects = subjectSnapshot.data ?? const <SubjectModel>[];
           if (subjects.isEmpty) {
-            return const Center(
-              child: Text(
-                'No subjects found.',
-                style: TextStyle(color: Color(0xFF667085)),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.menu_book_outlined,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No subjects yet',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Create your first subject to get started',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                  ),
+                ],
               ),
             );
           }
@@ -319,50 +585,149 @@ class ViewSubjects extends StatelessWidget {
                     itemCount: subjects.length,
                     itemBuilder: (context, index) {
                       final subject = subjects[index];
-                      final teacherName =
-                          teacherById[subject.teacherId]?.fullName ??
-                          'Unassigned';
+                      final teacher = teacherById[subject.teacherId];
+                      final teacherName = teacher?.fullName ?? 'Unassigned';
                       final classNames = subject.classIds
                           .map((id) => classById[id]?.name ?? id)
                           .toList();
+                      final assignedClasses = subject.classIds
+                          .map((id) => classById[id])
+                          .whereType<ClassModel>()
+                          .toList();
+                      final initials = subject.name.isNotEmpty
+                          ? subject.name[0].toUpperCase()
+                          : '';
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                      return GestureDetector(
+                        onTap: () => _showSubjectDetailSheet(
+                          context,
+                          subject,
+                          teacher,
+                          assignedClasses,
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          title: Text(
-                            subject.name,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Teacher: $teacherName\nClasses: ${classNames.join(', ')}',
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
                             ),
-                          ),
-                          trailing: Wrap(
-                            spacing: 6,
-                            children: [
-                              IconButton(
-                                onPressed: () =>
-                                    _showEditDialog(context, subject),
-                                icon: const Icon(Icons.edit_outlined),
-                                tooltip: 'Edit',
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                              IconButton(
-                                onPressed: () =>
-                                    _confirmDelete(context, subject),
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Blue accent bar
+                              Container(
+                                width: 4,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(14),
+                                    bottomLeft: Radius.circular(14),
+                                  ),
                                 ),
-                                tooltip: 'Delete',
+                              ),
+                              // Content
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF2563EB,
+                                              ).withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                initials,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF2563EB),
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              subject.name,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.person_outline,
+                                            size: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              teacherName,
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 12,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Icon(
+                                            Icons.class_outlined,
+                                            size: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              classNames.join(', '),
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 12,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),

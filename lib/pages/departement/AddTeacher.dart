@@ -100,7 +100,7 @@ class _AddTeacherState extends State<AddTeacher> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: departmentAppBar(context, "Add Teacher"),
       drawer: departmentDrawer(context),
       body: Stack(
@@ -111,133 +111,261 @@ class _AddTeacherState extends State<AddTeacher> {
               key: _formKey,
               child: ListView(
                 children: [
+                  // REDESIGN 1: Page Header with gradient and icon
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          "Add New Teacher",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const Icon(
+                          Icons.person_add_outlined,
+                          color: Colors.white,
+                          size: 28,
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          "Enter teacher information below",
-                          style: TextStyle(color: Colors.white70),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Add New Teacher",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Fill in the details below",
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 2: Form Fields in clean card with title
                   Container(
-                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Text(
+                                "Teacher Details",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2563EB),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Full Name',
+                              fillColor: Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor,
+                              filled: true,
+                              prefixIcon: const Icon(Icons.person),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter the teacher name';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _emailController,
+                            decoration: InputDecoration(
+                              labelText: 'Email Address',
+                              fillColor: Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor,
+                              filled: true,
+                              prefixIcon: const Icon(Icons.email),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter an email address';
+                              }
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(value)) {
+                                return 'Please enter a valid email address';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              fillColor: Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor,
+                              filled: true,
+                              prefixIcon: const Icon(Icons.lock),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter a password';
+                              }
+                              if (value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              fillColor: Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor,
+                              filled: true,
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF2563EB),
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please confirm the password';
+                              }
+                              if (value != _passwordController.text) {
+                                return 'Passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 3: Subjects Section with professional card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          "Teacher Details",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Subjects",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF7C3AED),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.person),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter the teacher name';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email Address',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.email),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter an email address';
-                            }
-                            if (!RegExp(
-                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                            ).hasMatch(value)) {
-                              return 'Please enter a valid email address';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.lock),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _confirmPasswordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Confirm Password',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.lock_outline),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please confirm the password';
-                            }
-                            if (value != _passwordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          "Subjects",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 14),
                         StreamBuilder<List<SubjectModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
@@ -256,40 +384,100 @@ class _AddTeacherState extends State<AddTeacher> {
                             }
                             return Wrap(
                               spacing: 8,
+                              runSpacing: 8,
                               children: subjects.map((subject) {
                                 final isSelected = _selectedSubjects.contains(
                                   subject.id,
                                 );
-                                return FilterChip(
-                                  label: Text(subject.name),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
+                                return GestureDetector(
+                                  onTap: () {
                                     setState(() {
-                                      if (selected) {
-                                        _selectedSubjects.add(subject.id);
-                                      } else {
+                                      if (isSelected) {
                                         _selectedSubjects.remove(subject.id);
+                                      } else {
+                                        _selectedSubjects.add(subject.id);
                                       }
                                     });
                                   },
-                                  selectedColor: const Color(
-                                    0xFF2563EB,
-                                  ).withOpacity(0.2),
-                                  checkmarkColor: const Color(0xFF2563EB),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF2563EB)
+                                          : Theme.of(context).cardColor,
+                                      border: isSelected
+                                          ? null
+                                          : Border.all(
+                                              color: const Color(
+                                                0xFF2563EB,
+                                              ).withOpacity(0.4),
+                                              width: 1.5,
+                                            ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      subject.name,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : const Color(0xFF2563EB),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
                                 );
                               }).toList(),
                             );
                           },
                         ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          "Assigned Groups",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 4: Assigned Groups Section - organized cards per section
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(height: 10),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Assigned Groups",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2563EB),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
                         StreamBuilder<List<LevelModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
@@ -305,122 +493,233 @@ class _AddTeacherState extends State<AddTeacher> {
                               return const Text('No levels found.');
                             }
                             return Column(
-                              children: levels.map((level) {
+                              children: List.generate(levels.length, (index) {
+                                final level = levels[index];
+                                final isLicence = level.name.contains('L');
+                                final accentColor = isLicence
+                                    ? const Color(0xFF2563EB)
+                                    : const Color(0xFF7C3AED);
+
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 14),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        level.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
+                                  padding: EdgeInsets.only(
+                                    bottom: index < levels.length - 1 ? 10 : 0,
+                                  ),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).scaffoldBackgroundColor,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: accentColor,
+                                          width: 4,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      StreamBuilder<List<GroupModel>>(
-                                        stream: context
-                                            .watch<StudentManagementProvider>()
-                                            .watchGroupsByLevel(
-                                              levelId: level.id,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 6,
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              level.name,
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface,
+                                              ),
                                             ),
-                                        builder: (context, groupSnapshot) {
-                                          final groups =
-                                              groupSnapshot.data ??
-                                              const <GroupModel>[];
-                                          if (groupSnapshot.connectionState ==
-                                              ConnectionState.waiting) {
-                                            return const LinearProgressIndicator();
-                                          }
-                                          if (groups.isEmpty) {
-                                            return const Text(
-                                              'No groups found.',
-                                            );
-                                          }
-
-                                          for (final group in groups) {
-                                            _groupLevelIds.putIfAbsent(
-                                              group.id,
-                                              () => group.levelId,
-                                            );
-                                          }
-
-                                          return Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children: groups.map((group) {
-                                              final isSelected =
-                                                  _selectedGroupIds.contains(
-                                                    group.id,
-                                                  );
-                                              return FilterChip(
-                                                label: Text(group.name),
-                                                selected: isSelected,
-                                                onSelected: (selected) {
-                                                  setState(() {
-                                                    if (selected) {
-                                                      _selectedGroupIds.add(
-                                                        group.id,
-                                                      );
-                                                    } else {
-                                                      _selectedGroupIds.remove(
-                                                        group.id,
-                                                      );
-                                                    }
-                                                  });
-                                                },
-                                                selectedColor: const Color(
-                                                  0xFF2563EB,
-                                                ).withOpacity(0.2),
-                                                checkmarkColor: const Color(
-                                                  0xFF2563EB,
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 3,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: accentColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                isLicence
+                                                    ? 'Licence'
+                                                    : 'Master',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Divider(
+                                          color: accentColor.withOpacity(0.2),
+                                          height: 1,
+                                          thickness: 1,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        StreamBuilder<List<GroupModel>>(
+                                          stream: context
+                                              .watch<
+                                                StudentManagementProvider
+                                              >()
+                                              .watchGroupsByLevel(
+                                                levelId: level.id,
+                                              ),
+                                          builder: (context, groupSnapshot) {
+                                            final groups =
+                                                groupSnapshot.data ??
+                                                const <GroupModel>[];
+                                            if (groupSnapshot.connectionState ==
+                                                ConnectionState.waiting) {
+                                              return const LinearProgressIndicator();
+                                            }
+                                            if (groups.isEmpty) {
+                                              return Text(
+                                                'No groups available',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: Colors.grey[400],
                                                 ),
                                               );
-                                            }).toList(),
-                                          );
-                                        },
-                                      ),
-                                    ],
+                                            }
+
+                                            for (final group in groups) {
+                                              _groupLevelIds.putIfAbsent(
+                                                group.id,
+                                                () => group.levelId,
+                                              );
+                                            }
+
+                                            return Wrap(
+                                              spacing: 8,
+                                              runSpacing: 8,
+                                              children: groups.map((group) {
+                                                final isSelected =
+                                                    _selectedGroupIds.contains(
+                                                      group.id,
+                                                    );
+                                                return GestureDetector(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      if (isSelected) {
+                                                        _selectedGroupIds
+                                                            .remove(group.id);
+                                                      } else {
+                                                        _selectedGroupIds.add(
+                                                          group.id,
+                                                        );
+                                                      }
+                                                    });
+                                                  },
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 12,
+                                                          vertical: 6,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: isSelected
+                                                          ? accentColor
+                                                          : Colors.transparent,
+                                                      border: isSelected
+                                                          ? null
+                                                          : Border.all(
+                                                              color:
+                                                                  accentColor,
+                                                              width: 1.5,
+                                                            ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      group.name,
+                                                      style: TextStyle(
+                                                        color: isSelected
+                                                            ? Colors.white
+                                                            : accentColor,
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
-                              }).toList(),
+                              }),
                             );
                           },
-                        ),
-                        const SizedBox(height: 30),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isSaving ? null : _submitForm,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: const Color(0xFF2563EB),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: _isSaving
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Add Teacher',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                          ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 5: Save Button with full width and better styling
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _submitForm,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          backgroundColor: const Color(0xFF2563EB),
+                          disabledBackgroundColor: const Color(
+                            0xFF2563EB,
+                          ).withOpacity(0.6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Add Teacher',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

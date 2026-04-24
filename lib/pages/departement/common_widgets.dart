@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/pages/department_dashboard.dart';
 import 'package:test/main.dart'; // ✅ added
 import 'AddStudent.dart';
@@ -85,18 +86,18 @@ PreferredSizeWidget departmentAppBar(BuildContext context, String title) {
 }
 
 Drawer departmentDrawer(BuildContext context) {
+  final user = FirebaseAuth.instance.currentUser;
+  final userEmail = user?.email ?? '';
+
   return Drawer(
     child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFF8F9FB), Color(0xFFE8F0FE)],
-        ),
-      ),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
+          // ── Header ──────────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
@@ -105,110 +106,247 @@ Drawer departmentDrawer(BuildContext context) {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
-                Text(
-                  context.tr('app_name'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.school,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hodoori',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Smart Attendance',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 14),
                 Text(
-                  context.tr('app_subtitle'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  userEmail,
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          _drawerItem(context, Icons.home, context.tr('dashboard'), () {
-            Navigator.pop(context);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const DepartmentDashboard(),
-              ),
-            );
-          }),
-          _drawerItem(context, Icons.person_add, context.tr('add'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddStudent()),
-            );
-          }),
-          _drawerItem(context, Icons.school, context.tr('teachers'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddTeacher()),
-            );
-          }),
-          _drawerItem(context, Icons.subject, context.tr('subjects'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddSubject()),
-            );
-          }),
-          _drawerItem(context, Icons.people, context.tr('students'), () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, ViewStudent.routeName);
-          }),
-          _drawerItem(context, Icons.badge, context.tr('teachers'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ViewTeachers()),
-            );
-          }),
-          _drawerItem(context, Icons.book, context.tr('subjects'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ViewSubjects()),
-            );
-          }),
-          _drawerItem(context, Icons.visibility, context.tr('attendance'), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const VewJustification()),
-            );
-          }),
-          const Divider(height: 20),
-          _drawerItem(context, Icons.logout, context.tr('cancel'), () {
-            Navigator.pop(context);
-            _logoutFromDepartment(context);
-          }),
+
+          // ── Navigation Section ──────────────────────────────────────
+          _sectionLabel(context, 'Navigation'),
+          _drawerIconItem(
+            context,
+            Icons.dashboard_outlined,
+            'Dashboard',
+            const Color(0xFF2563EB),
+            () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DepartmentDashboard(),
+                ),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.fact_check_outlined,
+            'Attendance',
+            const Color(0xFF2563EB),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const VewJustification(),
+                ),
+              );
+            },
+          ),
+
+          // ── Add New Section ─────────────────────────────────────────
+          _sectionLabel(context, 'Add New'),
+          _drawerIconItem(
+            context,
+            Icons.person_add_outlined,
+            'Add Student',
+            const Color(0xFF2563EB),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddStudent()),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.school_outlined,
+            'Add Teacher',
+            const Color(0xFF7C3AED),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddTeacher()),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.menu_book_outlined,
+            'Add Subject',
+            const Color(0xFF059669),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddSubject()),
+              );
+            },
+          ),
+
+          // ── Manage Section ──────────────────────────────────────────
+          _sectionLabel(context, 'Manage'),
+          _drawerIconItem(
+            context,
+            Icons.people_outline,
+            'View Students',
+            const Color(0xFF2563EB),
+            () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, ViewStudent.routeName);
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.manage_accounts_outlined,
+            'View Teachers',
+            const Color(0xFF7C3AED),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ViewTeachers()),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.library_books_outlined,
+            'View Subjects',
+            const Color(0xFF059669),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ViewSubjects()),
+              );
+            },
+          ),
+
+          // ── Bottom Items ────────────────────────────────────────────
+          const Divider(height: 20, thickness: 1),
+          _drawerIconItem(
+            context,
+            Icons.settings_outlined,
+            'Settings',
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DepartmentSettingsPage(),
+                ),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.logout,
+            'Sign Out',
+            const Color(0xFFDC2626),
+            () {
+              Navigator.pop(context);
+              _logoutFromDepartment(context);
+            },
+          ),
         ],
       ),
     ),
   );
 }
 
-Widget _drawerItem(
+Widget _sectionLabel(BuildContext context, String label) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+      ),
+    ),
+  );
+}
+
+Widget _drawerIconItem(
   BuildContext context,
   IconData icon,
   String text,
+  Color color,
   VoidCallback onTap,
 ) {
-  return Container(
-    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     child: ListTile(
-      leading: Icon(icon, color: const Color(0xFF2563EB)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(child: Icon(icon, color: color, size: 20)),
+      ),
       title: Text(
         text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A1A),
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      tileColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      hoverColor: const Color(0xFF2563EB).withOpacity(0.08),
     ),
   );
 }

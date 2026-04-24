@@ -14,6 +14,9 @@ class VewJustification extends StatefulWidget {
 
 class _VewJustificationState extends State<VewJustification> {
   String _selectedFilter = 'all'; // 'all', 'pending', 'accepted', 'rejected'
+  int _currentLevel = 1; // 1: sections, 2: groups, 3: justifications
+  String? _selectedSection;
+  String? _selectedGroup;
 
   String _normalizeStatus(String status) {
     final normalized = status.toLowerCase().trim();
@@ -53,18 +56,65 @@ class _VewJustificationState extends State<VewJustification> {
     return grouped;
   }
 
+  Map<String, int> _getSectionStats(
+    List<JustificationModel> allItems,
+    String section,
+  ) {
+    final sectionItems = allItems.where((j) => j.levelName == section).toList();
+    final pending = sectionItems.where((j) => j.status == 'submitted').length;
+    final total = sectionItems.length;
+    return {'pending': pending, 'total': total};
+  }
+
+  Map<String, int> _getGroupStats(
+    List<JustificationModel> allItems,
+    String section,
+    String group,
+  ) {
+    final groupItems = allItems
+        .where((j) => j.levelName == section && j.groupName == group)
+        .toList();
+    final pending = groupItems.where((j) => j.status == 'submitted').length;
+    final total = groupItems.length;
+    return {'pending': pending, 'total': total};
+  }
+
+  bool _isLicenceLevel(String section) {
+    return section.startsWith('L');
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentManagementProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFF8F9FB),
-        foregroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        leading: _currentLevel > 1
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    if (_currentLevel == 3) {
+                      _currentLevel = 2;
+                      _selectedGroup = null;
+                    } else if (_currentLevel == 2) {
+                      _currentLevel = 1;
+                      _selectedSection = null;
+                    }
+                  });
+                },
+              )
+            : null,
         title: Text(
-          context.tr('justification_requests'),
+          _currentLevel == 1
+              ? context.tr('justification_requests')
+              : _currentLevel == 2
+              ? _selectedSection ?? ''
+              : '$_selectedSection › $_selectedGroup',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -120,248 +170,435 @@ class _VewJustificationState extends State<VewJustification> {
               );
             }
 
-            final grouped = _groupJustifications(allItems);
-            final filteredCount = allItems
-                .where((item) => _matchesFilter(item.status))
-                .length;
+            // Show appropriate level view
+            if (_currentLevel == 1) {
+              return _buildSectionsView(context, allItems, pending, total);
+            } else if (_currentLevel == 2) {
+              return _buildGroupsView(context, allItems, _selectedSection!);
+            } else {
+              return _buildJustificationsView(
+                context,
+                allItems,
+                _selectedSection!,
+                _selectedGroup!,
+              );
+            }
+          },
+        ),
+      ),
+    );
+  }
 
-            return Column(
+  Widget _buildSectionsView(
+    BuildContext context,
+    List<JustificationModel> allItems,
+    int pending,
+    int total,
+  ) {
+    // Get unique sections
+    final sections = <String>{};
+    for (final item in allItems) {
+      sections.add(item.levelName ?? 'Unknown');
+    }
+    final sortedSections = sections.toList()
+      ..sort((a, b) {
+        final aIsLicence = _isLicenceLevel(a);
+        final bIsLicence = _isLicenceLevel(b);
+        if (aIsLicence != bIsLicence) {
+          return aIsLicence ? -1 : 1;
+        }
+        return a.compareTo(b);
+      });
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                Icon(Icons.assignment_outlined, color: Colors.white, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Justification Requests',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(16),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$pending pending · $total total',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$total Requests',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: sortedSections.length,
+            itemBuilder: (context, index) {
+              final section = sortedSections[index];
+              final stats = _getSectionStats(allItems, section);
+              final sectionPending = stats['pending'] ?? 0;
+              final sectionTotal = stats['total'] ?? 0;
+              final isLicence = _isLicenceLevel(section);
+              final accentColor = isLicence
+                  ? const Color(0xFF2563EB)
+                  : const Color(0xFF7C3AED);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _currentLevel = 2;
+                      _selectedSection = section;
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border(
+                        left: BorderSide(color: accentColor, width: 4),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
                         ),
                       ],
                     ),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(
-                          Icons.assignment_outlined,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Justification Requests',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$pending pending · $total total',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '$total Requests',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildFilterChip('all', 'All'),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('pending', 'Pending'),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('accepted', 'Accepted'),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('rejected', 'Rejected'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: grouped.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.inbox_outlined,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No results',
+                                section,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                   color: Theme.of(
                                     context,
                                   ).colorScheme.onSurface,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isLicence ? 'Licence' : 'Master',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
                             ],
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: grouped.entries.length,
-                          itemBuilder: (context, sectionIndex) {
-                            final sectionEntry = grouped.entries.elementAt(
-                              sectionIndex,
-                            );
-                            final section = sectionEntry.key;
-                            final groups = sectionEntry.value;
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.fromLTRB(
-                                    0,
-                                    20,
-                                    0,
-                                    8,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF2563EB,
-                                    ).withOpacity(0.06),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border(
-                                      left: BorderSide(
-                                        color: const Color(0xFF2563EB),
-                                        width: 3,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 4,
-                                    ),
-                                    child: Text(
-                                      '📚 $section',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF2563EB),
-                                      ),
-                                    ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (sectionPending > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$sectionPending pending',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
                                   ),
                                 ),
-                                ...groups.entries.map((groupEntry) {
-                                  final group = groupEntry.key;
-                                  final justifications = groupEntry.value;
-
-                                  return Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          24,
-                                          12,
-                                          16,
-                                          6,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.people_outline,
-                                              size: 16,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withOpacity(0.6),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              group,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withOpacity(0.6),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      ...justifications.map((item) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 12,
-                                            left: 24,
-                                          ),
-                                          child: _JustificationCard(
-                                            item: item,
-                                            onTap: () =>
-                                                _showDetails(context, item),
-                                            onAccept: () =>
-                                                _handleAccept(context, item),
-                                            onReject: () => _showRejectDialog(
-                                              context,
-                                              item,
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ],
-                                  );
-                                }).toList(),
-                              ],
-                            );
-                          },
+                              ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$sectionTotal total',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: accentColor,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildGroupsView(
+    BuildContext context,
+    List<JustificationModel> allItems,
+    String section,
+  ) {
+    // Get groups for this section
+    final groups = <String>{};
+    for (final item in allItems.where((j) => j.levelName == section)) {
+      groups.add(item.groupName ?? 'Unknown');
+    }
+    final sortedGroups = groups.toList()..sort();
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: sortedGroups.length,
+            itemBuilder: (context, index) {
+              final group = sortedGroups[index];
+              final stats = _getGroupStats(allItems, section, group);
+              final groupPending = stats['pending'] ?? 0;
+              final groupTotal = stats['total'] ?? 0;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _currentLevel = 3;
+                      _selectedGroup = group;
+                      _selectedFilter = 'all'; // Reset filter
+                    });
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border(
+                        left: BorderSide(
+                          color: const Color(0xFF2563EB),
+                          width: 4,
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                group,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                section,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (groupPending > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$groupPending pending',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$groupTotal total',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJustificationsView(
+    BuildContext context,
+    List<JustificationModel> allItems,
+    String section,
+    String group,
+  ) {
+    final justifications = allItems
+        .where((j) => j.levelName == section && j.groupName == group)
+        .where((item) => _matchesFilter(item.status))
+        .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip('all', 'All'),
+                const SizedBox(width: 8),
+                _buildFilterChip('pending', 'Pending'),
+                const SizedBox(width: 8),
+                _buildFilterChip('accepted', 'Accepted'),
+                const SizedBox(width: 8),
+                _buildFilterChip('rejected', 'Rejected'),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: justifications.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 64,
+                        color: Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No results',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: justifications.length,
+                  itemBuilder: (context, index) {
+                    final item = justifications[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _JustificationCard(
+                        item: item,
+                        onTap: () => _showDetails(context, item),
+                        onAccept: () => _handleAccept(context, item),
+                        onReject: () => _showRejectDialog(context, item),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -625,7 +862,7 @@ class _JustificationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '📅 Absence: ${item.absenceDate.toIso8601String().split('T').first}',
+                      'Absence: ${item.absenceDate.toIso8601String().split('T').first}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(
@@ -647,7 +884,7 @@ class _JustificationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '📤 Submitted: ${item.createdAt.toIso8601String().split('T').first}',
+                      'Submitted: ${item.createdAt.toIso8601String().split('T').first}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(
@@ -670,7 +907,7 @@ class _JustificationCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '📝 Reason: ${item.reason ?? '-'}',
+                        'Reason: ${item.reason ?? '-'}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

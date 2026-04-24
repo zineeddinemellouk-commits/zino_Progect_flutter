@@ -69,9 +69,9 @@ class _AddSubjectState extends State<AddSubject> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create subject: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create subject: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -80,7 +80,7 @@ class _AddSubjectState extends State<AddSubject> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: departmentAppBar(context, "Add Subject"),
       drawer: departmentDrawer(context),
       body: Stack(
@@ -91,56 +91,96 @@ class _AddSubjectState extends State<AddSubject> {
               key: _formKey,
               child: ListView(
                 children: [
+                  // REDESIGN 1: Page Header with gradient
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Add New Subject",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          "Enter subject information below",
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          "Subject Details",
+                          "Add New Subject",
                           style: TextStyle(
+                            color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Fill in the subject details",
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 2: Subject Name Field in clean card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 3,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Subject Details",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF2563EB),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
                         TextFormField(
                           controller: _subjectNameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Subject Name',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            hintText: 'Enter subject name',
+                            fillColor: Theme.of(
+                              context,
+                            ).scaffoldBackgroundColor,
+                            filled: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF2563EB),
+                                width: 2,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -149,100 +189,488 @@ class _AddSubjectState extends State<AddSubject> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Assign Teacher (Optional)',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 3: Assign Teacher Section
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        const SizedBox(height: 8),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 3,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              "Assign Teacher",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF7C3AED),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Optional — select one teacher",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         StreamBuilder<List<TeacherModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
                               .watchTeachers(),
                           builder: (context, snapshot) {
-                            final teachers = snapshot.data ?? const <TeacherModel>[];
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                            final teachers =
+                                snapshot.data ?? const <TeacherModel>[];
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
                               return const LinearProgressIndicator();
                             }
                             if (teachers.isEmpty) {
-                              return const Text(
+                              return Text(
                                 'No teachers found. You can still create the subject.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
                               );
                             }
                             return Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: teachers.map((teacher) {
-                                final selected = _selectedTeachers.contains(teacher.id);
-                                return FilterChip(
-                                  label: Text(teacher.fullName),
-                                  selected: selected,
-                                  onSelected: (isSelected) {
+                                final isSelected = _selectedTeachers.contains(
+                                  teacher.id,
+                                );
+                                return GestureDetector(
+                                  onTap: () {
                                     setState(() {
                                       if (isSelected) {
-                                        _selectedTeachers.add(teacher.id);
-                                      } else {
                                         _selectedTeachers.remove(teacher.id);
+                                      } else {
+                                        _selectedTeachers.clear();
+                                        _selectedTeachers.add(teacher.id);
                                       }
                                     });
                                   },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF7C3AED)
+                                          : Colors.transparent,
+                                      border: isSelected
+                                          ? null
+                                          : Border.all(
+                                              color: const Color(
+                                                0xFF7C3AED,
+                                              ).withOpacity(0.4),
+                                              width: 1.5,
+                                            ),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      teacher.fullName,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : const Color(0xFF7C3AED),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
                                 );
                               }).toList(),
                             );
                           },
                         ),
-                        const SizedBox(height: 16),
-                        const Text('Levels', style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        StreamBuilder<List<ClassModel>>(
-                          stream: context
-                              .watch<StudentManagementProvider>()
-                              .watchClasses(),
-                          builder: (context, snapshot) {
-                            final classes = snapshot.data ?? const <ClassModel>[];
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const LinearProgressIndicator();
-                            }
-                            if (classes.isEmpty) {
-                              return const Text('No classes found.');
-                            }
-                            for (final c in classes) {
-                              _selectedClasses.putIfAbsent(c.id, () => false);
-                            }
-                            return Column(
-                              children: classes
-                                  .map(
-                                    (c) => CheckboxListTile(
-                                      title: Text(c.name),
-                                      value: _selectedClasses[c.id] ?? false,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedClasses[c.id] = value ?? false;
-                                        });
-                                      },
-                                    ),
-                                  )
-                                  .toList(),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isSaving ? null : _submit,
-                            child: _isSaving
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : const Text('Create Subject'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 4: Levels Section with Switch widgets
+                  StreamBuilder<List<ClassModel>>(
+                    stream: context
+                        .watch<StudentManagementProvider>()
+                        .watchClasses(),
+                    builder: (context, snapshot) {
+                      final classes = snapshot.data ?? const <ClassModel>[];
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const LinearProgressIndicator();
+                      }
+                      if (classes.isEmpty) {
+                        return const Text('No classes found.');
+                      }
+                      for (final c in classes) {
+                        _selectedClasses.putIfAbsent(c.id, () => false);
+                      }
+
+                      // Separate classes into Licence and Master
+                      final licenceClasses = classes
+                          .where((c) => c.name.startsWith('L'))
+                          .toList();
+                      final masterClasses = classes
+                          .where((c) => c.name.startsWith('M'))
+                          .toList();
+
+                      return Column(
+                        children: [
+                          // Licence Section
+                          if (licenceClasses.isNotEmpty) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 3,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2563EB),
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        "Licence",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Column(
+                                    children: List.generate(
+                                      licenceClasses.length,
+                                      (index) {
+                                        final c = licenceClasses[index];
+                                        final semesterInfo = c.name.length > 2
+                                            ? c.name.substring(2).trim()
+                                            : '';
+                                        return Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom:
+                                                index <
+                                                    licenceClasses.length - 1
+                                                ? 8
+                                                : 0,
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(
+                                                context,
+                                              ).scaffoldBackgroundColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.04),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 10,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        c.name,
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      if (semesterInfo
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
+                                                        Text(
+                                                          semesterInfo,
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors
+                                                                .grey[500],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                Switch(
+                                                  value:
+                                                      _selectedClasses[c.id] ??
+                                                      false,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _selectedClasses[c.id] =
+                                                          value;
+                                                    });
+                                                  },
+                                                  activeColor: const Color(
+                                                    0xFF2563EB,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          // Master Section
+                          if (masterClasses.isNotEmpty) ...[
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 3,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF7C3AED),
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        "Master",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF7C3AED),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Column(
+                                    children: List.generate(
+                                      masterClasses.length,
+                                      (index) {
+                                        final c = masterClasses[index];
+                                        final semesterInfo = c.name.length > 2
+                                            ? c.name.substring(2).trim()
+                                            : '';
+                                        return Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom:
+                                                index < masterClasses.length - 1
+                                                ? 8
+                                                : 0,
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(
+                                                context,
+                                              ).scaffoldBackgroundColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.04),
+                                                  blurRadius: 4,
+                                                ),
+                                              ],
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 10,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        c.name,
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                      if (semesterInfo
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
+                                                        Text(
+                                                          semesterInfo,
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors
+                                                                .grey[500],
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                Switch(
+                                                  value:
+                                                      _selectedClasses[c.id] ??
+                                                      false,
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _selectedClasses[c.id] =
+                                                          value;
+                                                    });
+                                                  },
+                                                  activeColor: const Color(
+                                                    0xFF7C3AED,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // REDESIGN 5: Create Subject Button with gradient
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Create Subject',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

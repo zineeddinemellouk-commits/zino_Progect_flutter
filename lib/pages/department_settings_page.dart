@@ -2,10 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/helpers/localization_helper.dart';
-import 'package:test/providers/locale_provider.dart';
+import 'package:test/main.dart';
 
 class DepartmentSettingsPage extends StatefulWidget {
   const DepartmentSettingsPage({super.key});
@@ -23,8 +22,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
   late TextEditingController _displayNameController;
   late TextEditingController _universityNameController;
 
-  bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
   String _selectedAcademicYear = '2024-2025';
   String _selectedSemester = 'S1';
 
@@ -64,7 +61,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
             _universityNameController.text = data['universityName'] ?? '';
             _selectedAcademicYear = data['academicYear'] ?? '2024-2025';
             _selectedSemester = data['semester'] ?? 'S1';
-            _notificationsEnabled = data['notificationsEnabled'] ?? true;
           });
         }
       }
@@ -83,7 +79,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       if (user != null) {
         await _firestore.collection('user_profiles').doc(user.uid).set({
           'displayName': _displayNameController.text.trim(),
-          'notificationsEnabled': _notificationsEnabled,
         }, SetOptions(merge: true));
         if (!mounted) return;
         _showSuccess(context.tr('profile_saved_success'));
@@ -315,6 +310,19 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     }
   }
 
+  // ── Logout ────────────────────────────────────────────────────────
+
+  Future<void> _logout() async {
+    try {
+      await _auth.signOut();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    } catch (e) {
+      if (!mounted) return;
+      _showError('${context.tr('error_logout')}: $e');
+    }
+  }
+
   // ── Snackbars ─────────────────────────────────────────────────────
 
   void _showSuccess(String message) {
@@ -351,11 +359,36 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     );
   }
 
+  // ── Logout ────────────────────────────────────────────────────────
+
+  Future<void> _logoutFromDepartment(BuildContext context) async {
+    try {
+      await _auth.signOut();
+      if (!mounted) return;
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HodooriLoginScreen()),
+        (_) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showError('${context.tr("logout_error")}: $e');
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
+
+    // Extract first 2 letters of display name for avatar
+    String displayName = _displayNameController.text.isNotEmpty
+        ? _displayNameController.text
+        : (user?.email ?? '').split('@')[0];
+    String initials = displayName.length >= 2
+        ? displayName.substring(0, 2).toUpperCase()
+        : displayName.toUpperCase().padRight(2, '');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -366,7 +399,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ─────────────────────────────────────────────
+            // ── Header with Avatar ─────────────────────────────────
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -377,17 +410,23 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
               ),
               child: Row(
                 children: [
+                  // Avatar with initials
                   Container(
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(26),
                     ),
-                    child: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 26,
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Color(0xFF2563EB),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -396,16 +435,16 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          context.tr('settings'),
+                          displayName,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 4),
                         Text(
-                          user?.email ?? context.tr('department'),
+                          user?.email ?? '',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -442,16 +481,29 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                     text: user?.email ?? context.tr('current_email'),
                   ),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(
+                    prefixIcon: Icon(
                       Icons.email_outlined,
-                      color: Color(0xFF9CA3AF),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
                       size: 20,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withOpacity(0.25),
+                        width: 1.5,
+                      ),
                     ),
                     filled: true,
-                    fillColor: const Color(0xFFF5F5F5),
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 12,
@@ -485,149 +537,6 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                   label: context.tr('save_profile'),
                   isLoading: _isLoadingProfile,
                   onPressed: _saveProfile,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // ── App Settings ────────────────────────────────────────
-            _sectionTitle(context.tr('app_settings'), Icons.tune_outlined),
-            const SizedBox(height: 10),
-            _card(
-              children: [
-                // ── Language Selector ──────────────────────────────
-                Consumer<LocaleProvider>(
-                  builder: (context, localeProvider, _) => Column(
-                    children: [
-                      Row(
-                        children: [
-                          _iconBox(Icons.language, const Color(0xFF2563EB)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              context.tr('language'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ),
-                          DropdownButton<String>(
-                            value: localeProvider.languageCode,
-                            underline: const SizedBox(),
-                            borderRadius: BorderRadius.circular(10),
-                            items: LocaleProvider.languageOptions.entries
-                                .map(
-                                  (entry) => DropdownMenuItem(
-                                    value: entry.key,
-                                    child: Text(entry.value),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) async {
-                              if (value != null) {
-                                await localeProvider.setLocale(value);
-                                if (!context.mounted) return;
-                                setState(() {});
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        children: [
-                          _iconBox(
-                            Icons.notifications_outlined,
-                            const Color(0xFF16A34A),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  context.tr('notifications'),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Text(
-                                  context.tr('receive_alerts'),
-                                  style: const TextStyle(
-                                    color: Color(0xFF9CA3AF),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: _notificationsEnabled,
-                            onChanged: (v) =>
-                                setState(() => _notificationsEnabled = v),
-                            thumbColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? const Color(0xFF2563EB)
-                                  : Colors.grey,
-                            ),
-                            trackColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? const Color(0xFF2563EB).withOpacity(0.4)
-                                  : Colors.grey.withOpacity(0.3),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        children: [
-                          _iconBox(
-                            Icons.dark_mode_outlined,
-                            const Color(0xFF374151),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  context.tr('dark_mode'),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                Text(
-                                  context.tr('switch_dark_theme'),
-                                  style: const TextStyle(
-                                    color: Color(0xFF9CA3AF),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: _darkModeEnabled,
-                            onChanged: (v) =>
-                                setState(() => _darkModeEnabled = v),
-                            thumbColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? const Color(0xFF2563EB)
-                                  : Colors.grey,
-                            ),
-                            trackColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) => states.contains(WidgetState.selected)
-                                  ? const Color(0xFF2563EB).withOpacity(0.4)
-                                  : Colors.grey.withOpacity(0.3),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -687,18 +596,50 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                _saveButton(
-                  label: context.tr('save_department_settings'),
-                  isLoading: _isLoadingDepartment,
-                  onPressed: _saveDepartmentSettings,
-                  color: const Color(0xFF004AC6),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _isLoadingDepartment
+                        ? null
+                        : _saveDepartmentSettings,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoadingDepartment
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            context.tr('save_department_settings'),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
 
             // ── About ───────────────────────────────────────────────
-            _sectionTitle(context.tr('about'), Icons.info_outline),
+            _sectionTitle('About Hodoori', Icons.info_outline),
             const SizedBox(height: 10),
             _card(
               children: [
@@ -712,6 +653,39 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
                 _infoRow(context.tr('developer'), context.tr('academic_team')),
               ],
             ),
+            const SizedBox(height: 24),
+
+            // ── Sign Out ────────────────────────────────────────────
+            _card(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _logoutFromDepartment(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: const Color(0xFFDC2626),
+                      side: const BorderSide(
+                        color: Color(0xFFDC2626),
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.logout),
+                    label: const Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 30),
           ],
         ),
@@ -722,17 +696,18 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
 
   // ── Reusable Widgets ──────────────────────────────────────────────
 
-  Widget _sectionTitle(String title, IconData icon) {
+  Widget _sectionTitle(String title, IconData icon, {Color? color}) {
+    final textColor = color ?? const Color(0xFF2563EB);
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF2563EB), size: 20),
+        Icon(icon, color: textColor, size: 20),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
-            fontSize: 16,
+          style: TextStyle(
+            fontSize: 15,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1F2937),
+            color: color ?? const Color(0xFF1F2937),
           ),
         ),
       ],
@@ -743,7 +718,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -774,24 +749,31 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
   InputDecoration _inputDeco(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      prefixIcon: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+        size: 20,
+      ),
+      hintStyle: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
+      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.25),
+          width: 1.5,
+        ),
       ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+      ),
+      filled: true,
+      fillColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withOpacity(0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    );
-  }
-
-  Widget _iconBox(IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(icon, color: color, size: 20),
     );
   }
 
@@ -804,13 +786,13 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButton<String>(
         value: value,
         isExpanded: true,
         underline: const SizedBox(),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         items: items
             .map((i) => DropdownMenuItem(value: i, child: Text(i)))
             .toList(),
@@ -857,18 +839,17 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
     required String label,
     required bool isLoading,
     required VoidCallback onPressed,
-    Color color = const Color(0xFF2563EB),
   }) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: color,
+          backgroundColor: const Color(0xFF2563EB),
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 13),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           disabledBackgroundColor: Colors.grey.shade300,
         ),

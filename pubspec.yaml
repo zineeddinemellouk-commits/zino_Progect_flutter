@@ -70,9 +70,9 @@ flutter:
 
   # Localization assets
   assets:
-    - assets/l10n/en.json
-    - assets/l10n/fr.json
-    - assets/l10n/ar.json
+    - assets/l10n/
+    - assets/l10n/images/
+    - assets/l10n/images/logo_hodori.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

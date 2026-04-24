@@ -503,9 +503,12 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
             child: Opacity(opacity: value, child: child),
           ),
           child: SizedBox(
-            width: 200,
-            height: 200,
-            child: CustomPaint(painter: _HodooriLogoPainter()),
+            width: 400,
+            height: 400,
+            child: Image.asset(
+              'assets/l10n/images/logo_hodori.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ),
         const SizedBox(height: 30),
@@ -577,6 +580,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
                   color: const Color(0xFF1F3A93).withOpacity(0.12),
                   blurRadius: 40,
                   offset: const Offset(0, 20),
+
                 ),
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -906,163 +910,4 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
   }
 }
 
-// ── LOGO PAINTER ─────────────────────────────────────────────────────
-class _HodooriLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-
-    // Shadow
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx, size.height * 0.82),
-        width: size.width * 0.72,
-        height: size.height * 0.14,
-      ),
-      Paint()
-        ..color = const Color(0xFF2563EB).withOpacity(0.18)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
-    );
-
-    // Graduation cap
-    final capPath = Path()
-      ..moveTo(cx, size.height * 0.04)
-      ..lineTo(size.width * 0.92, size.height * 0.30)
-      ..lineTo(cx, size.height * 0.44)
-      ..lineTo(size.width * 0.08, size.height * 0.30)
-      ..close();
-
-    canvas.drawPath(
-      capPath,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4DAEF0), Color(0xFF2176CC)],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.44)),
-    );
-
-    canvas.drawPath(
-      capPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..color = Colors.white.withOpacity(0.3)
-        ..strokeWidth = 1.5,
-    );
-
-    // Book left page
-    final bookTop = size.height * 0.37;
-    final bookBottom = size.height * 0.78;
-    final bookLeft = size.width * 0.14;
-    final bookRight = size.width * 0.86;
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(cx, bookTop + 6)
-        ..lineTo(bookLeft, bookTop + size.height * 0.06)
-        ..lineTo(bookLeft, bookBottom)
-        ..quadraticBezierTo(cx, bookBottom - 10, cx, bookBottom)
-        ..close(),
-      Paint()
-        ..shader =
-            const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF3B9EE8), Color(0xFF1A6EC4)],
-            ).createShader(
-              Rect.fromLTWH(
-                bookLeft,
-                bookTop,
-                cx - bookLeft,
-                bookBottom - bookTop,
-              ),
-            ),
-    );
-
-    // Book right page
-    canvas.drawPath(
-      Path()
-        ..moveTo(cx, bookTop + 6)
-        ..lineTo(bookRight, bookTop + size.height * 0.06)
-        ..lineTo(bookRight, bookBottom)
-        ..quadraticBezierTo(cx, bookBottom - 10, cx, bookBottom)
-        ..close(),
-      Paint()
-        ..shader =
-            const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF4DAEF0), Color(0xFF2176CC)],
-            ).createShader(
-              Rect.fromLTWH(cx, bookTop, bookRight - cx, bookBottom - bookTop),
-            ),
-    );
-
-    // Spine
-    canvas.drawLine(
-      Offset(cx, bookTop + 6),
-      Offset(cx, bookBottom),
-      Paint()
-        ..color = Colors.white.withOpacity(0.25)
-        ..strokeWidth = 2,
-    );
-
-    // Checkmark
-    canvas.drawPath(
-      Path()
-        ..moveTo(cx - size.width * 0.18, size.height * 0.60)
-        ..lineTo(cx - size.width * 0.04, size.height * 0.73)
-        ..lineTo(cx + size.width * 0.22, size.height * 0.49),
-      Paint()
-        ..color = Colors.white
-        ..strokeWidth = size.width * 0.062
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..style = PaintingStyle.stroke,
-    );
-
-    // Hodoori pill
-    final pillRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(cx, size.height * 0.91),
-        width: size.width * 0.68,
-        height: size.height * 0.12,
-      ),
-      const Radius.circular(12),
-    );
-    canvas.drawRRect(
-      pillRect,
-      Paint()
-        ..shader =
-            const LinearGradient(
-              colors: [Color(0xFF2563EB), Color(0xFF1743A0)],
-            ).createShader(
-              Rect.fromCenter(
-                center: Offset(cx, size.height * 0.91),
-                width: size.width * 0.68,
-                height: size.height * 0.12,
-              ),
-            ),
-    );
-
-    final tp = TextPainter(
-      text: const TextSpan(
-        text: 'Hodoori',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(
-      canvas,
-      Offset(cx - tp.width / 2, size.height * 0.91 - tp.height / 2),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+// ── LOGO PAINTER REMOVED - REPLACED WITH IMAGE.ASSET() ─────────────────────────────────────────────────────

@@ -447,23 +447,16 @@ class _LoginPageState extends State<LoginPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Welcome back",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Please enter your credentials",
-                    style: TextStyle(color: Colors.black54),
-                  ),
+                const SizedBox(height: 50),
+
+                /// Logo
+                Image.asset(
+                  'assets/l10n/images/logo_hodori.png',
+                  height: 100,
+                  width: 100,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
 
                 /// ✅ Role Switcher with Animation
                 Container(

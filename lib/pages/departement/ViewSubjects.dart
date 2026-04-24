@@ -309,13 +309,38 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                               ),
                                               items: teachers
                                                   .map(
-                                                    (teacher) =>
-                                                        DropdownMenuItem(
-                                                          value: teacher.id,
-                                                          child: Text(
+                                                    (
+                                                      teacher,
+                                                    ) => DropdownMenuItem(
+                                                      value: teacher.id,
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Text(
                                                             teacher.fullName,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                ),
                                                           ),
-                                                        ),
+                                                          Text(
+                                                            teacher.email,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors
+                                                                  .grey[500],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
                                                   )
                                                   .toList(),
                                               onChanged: (value) {
@@ -331,109 +356,7 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                     );
                                   },
                                 ),
-                                const SizedBox(height: 20),
-                                // Classes Field
-                                Text(
-                                  'Classes',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                StreamBuilder<List<ClassModel>>(
-                                  stream: context
-                                      .read<StudentManagementProvider>()
-                                      .watchClasses(),
-                                  builder: (context, classSnapshot) {
-                                    final classes =
-                                        classSnapshot.data ??
-                                        const <ClassModel>[];
-                                    if (classSnapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const LinearProgressIndicator();
-                                    }
-                                    if (classes.isEmpty) {
-                                      return const Text('No classes found.');
-                                    }
-                                    return Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: classes.map((classItem) {
-                                        final isSelected = selectedClasses
-                                            .contains(classItem.id);
-                                        return GestureDetector(
-                                          onTap: () {
-                                            setDialogState(() {
-                                              if (isSelected) {
-                                                selectedClasses.remove(
-                                                  classItem.id,
-                                                );
-                                              } else {
-                                                selectedClasses.add(
-                                                  classItem.id,
-                                                );
-                                              }
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? const Color(
-                                                      0xFF2563EB,
-                                                    ).withOpacity(0.08)
-                                                  : Colors.transparent,
-                                              border: Border.all(
-                                                color: isSelected
-                                                    ? const Color(0xFF2563EB)
-                                                    : Colors.grey[400]!,
-                                                width: isSelected ? 2 : 1,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                if (isSelected) ...[
-                                                  const Icon(
-                                                    Icons.check_circle,
-                                                    size: 16,
-                                                    color: Color(0xFF2563EB),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                ],
-                                                Text(
-                                                  classItem.name,
-                                                  style: TextStyle(
-                                                    color: isSelected
-                                                        ? const Color(
-                                                            0xFF2563EB,
-                                                          )
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurface,
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.w600
-                                                        : FontWeight.normal,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    );
-                                  },
-                                ),
+
                                 const SizedBox(height: 28),
                                 // Action Buttons
                                 Row(
@@ -474,18 +397,6 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                                         ?.validate() !=
                                                     true)
                                                   return;
-                                                if (selectedClasses.isEmpty) {
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Select at least one class.',
-                                                      ),
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
 
                                                 setDialogState(
                                                   () => isSaving = true,
@@ -497,24 +408,22 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                                 );
                                                 final messenger =
                                                     ScaffoldMessenger.of(
-                                                      context,
+                                                      bottomSheetContext,
                                                     );
+                                                final provider = context
+                                                    .read<
+                                                      StudentManagementProvider
+                                                    >();
 
                                                 try {
-                                                  await context
-                                                      .read<
-                                                        StudentManagementProvider
-                                                      >()
-                                                      .updateSubject(
-                                                        id: subject.id,
-                                                        name:
-                                                            nameController.text,
-                                                        teacherId:
-                                                            selectedTeacherId,
-                                                        classIds:
-                                                            selectedClasses
-                                                                .toList(),
-                                                      );
+                                                  await provider.updateSubject(
+                                                    id: subject.id,
+                                                    name: nameController.text,
+                                                    teacherId:
+                                                        selectedTeacherId,
+                                                    classIds: selectedClasses
+                                                        .toList(),
+                                                  );
 
                                                   // Use stored references
                                                   nav.pop();
@@ -526,8 +435,7 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                                     ),
                                                   );
                                                 } catch (e) {
-                                                  // Use stored references
-                                                  nav.pop();
+                                                  // Use stored references - show error but keep sheet open
                                                   messenger.showSnackBar(
                                                     SnackBar(
                                                       content: Text(
@@ -607,12 +515,7 @@ class _ViewSubjectsState extends State<ViewSubjects> {
     BuildContext context,
     SubjectModel subject,
     TeacherModel? teacher,
-    List<ClassModel> assignedClasses,
   ) {
-    final initials = subject.name.isNotEmpty
-        ? subject.name[0].toUpperCase()
-        : '';
-
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -620,228 +523,66 @@ class _ViewSubjectsState extends State<ViewSubjects> {
       ),
       builder: (context) => Container(
         decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF2563EB),
-              const Color(0xFF004AC6),
-              Theme.of(context).scaffoldBackgroundColor,
-            ],
-            stops: const [0, 0.25, 0.25],
-          ),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with avatar and subject info
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  children: [
-                    // Avatar
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Column(
+                children: [
+                  Text(
+                    subject.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      subject.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    teacher?.fullName ?? 'Unassigned',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${assignedClasses.length} class${assignedClasses.length != 1 ? 'es' : ''} assigned',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                      ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    teacher?.email ?? '',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
-              // Content
-              Container(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Assigned Classes section
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                      child: Text(
-                        'ASSIGNED CLASSES',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    if (assignedClasses.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          'No classes assigned',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 13,
-                          ),
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          children: [
-                            for (
-                              int i = 0;
-                              i < assignedClasses.length;
-                              i++
-                            ) ...[
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey[300]!,
-                                    width: 1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.class_outlined,
-                                      color: const Color(0xFF2563EB),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            assignedClasses[i].name
-                                                .split(' - ')
-                                                .first,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            teacher?.fullName ?? 'Unassigned',
-                                            style: TextStyle(
-                                              color: teacher != null
-                                                  ? Colors.grey[600]
-                                                  : const Color(0xFFF59E0B),
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (i < assignedClasses.length - 1)
-                                const SizedBox(height: 8),
-                            ],
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    // Action buttons
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showEditDialog(context, subject);
-                              },
-                              icon: const Icon(Icons.edit_outlined),
-                              label: const Text('Edit Subject'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: const Color(0xFF2563EB),
-                                side: const BorderSide(
-                                  color: Color(0xFF2563EB),
-                                  width: 1.5,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _confirmDelete(context, subject);
-                              },
-                              icon: const Icon(Icons.delete_outline),
-                              label: const Text('Delete'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.red,
-                                side: const BorderSide(
-                                  color: Colors.red,
-                                  width: 1.5,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1167,7 +908,6 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                   context,
                                   subject,
                                   teacher,
-                                  assignedClasses,
                                 ),
                                 child: Container(
                                   margin: EdgeInsets.only(
@@ -1236,83 +976,18 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                         ],
                                       ),
                                       const SizedBox(height: 12),
-                                      // Bottom Row: Teacher + Class Chips
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          // Teacher Info
-                                          Icon(
-                                            Icons.person_outline,
-                                            size: 16,
-                                            color: teacher != null
-                                                ? const Color(0xFF2563EB)
-                                                : Colors.grey[500],
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              teacherName,
-                                              style: TextStyle(
-                                                color: teacher != null
-                                                    ? const Color(0xFF2563EB)
-                                                    : Colors.grey[500],
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          // Class Chips
-                                          Expanded(
-                                            flex: 2,
-                                            child: Wrap(
-                                              spacing: 4,
-                                              runSpacing: 0,
-                                              children: assignedClasses
-                                                  .map(
-                                                    (classItem) => Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 4,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(
-                                                          0xFF2563EB,
-                                                        ).withOpacity(0.1),
-                                                        border: Border.all(
-                                                          color: const Color(
-                                                            0xFF2563EB,
-                                                          ),
-                                                          width: 1,
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                      ),
-                                                      child: Text(
-                                                        classItem.name
-                                                            .split(' - ')
-                                                            .first,
-                                                        style: const TextStyle(
-                                                          color: Color(
-                                                            0xFF2563EB,
-                                                          ),
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  )
-                                                  .toList(),
-                                            ),
-                                          ),
-                                        ],
+                                      // Teacher Name
+                                      Text(
+                                        teacherName,
+                                        style: TextStyle(
+                                          color: teacher != null
+                                              ? const Color(0xFF2563EB)
+                                              : Colors.grey[500],
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),

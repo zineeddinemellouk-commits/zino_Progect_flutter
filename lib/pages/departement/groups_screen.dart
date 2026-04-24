@@ -125,7 +125,16 @@ class GroupsScreen extends StatelessWidget {
     if (args is! LevelModel) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FB),
-        appBar: departmentAppBar(context, 'Groups', showBackButton: true),
+        appBar: departmentAppBar(
+          context,
+          'Groups',
+          customLeading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+        ),
         body: Center(
           child: Text(
             'Unable to open groups: invalid level data.',
@@ -142,7 +151,12 @@ class GroupsScreen extends StatelessWidget {
       appBar: departmentAppBar(
         context,
         'Groups - ${level.name}',
-        showBackButton: true,
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       drawer: departmentDrawer(context),
       body: Padding(

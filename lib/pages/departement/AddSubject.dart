@@ -58,17 +58,27 @@ class _AddSubjectState extends State<AddSubject> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Subject created successfully!')),
-      );
+
+      // Reset form and clear controllers first (these don't use context)
       _formKey.currentState?.reset();
       _subjectNameController.clear();
-      setState(() {
-        _selectedTeachers.clear();
-        _selectedClasses.updateAll((key, value) => false);
-      });
+      if (mounted) {
+        setState(() {
+          _selectedTeachers.clear();
+          _selectedClasses.updateAll((key, value) => false);
+        });
+      }
+
+      // Show snackbar last after all form operations complete
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subject created successfully!')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
+
+      // Show error snackbar only if context is still valid
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to create subject: $e')));
@@ -81,7 +91,14 @@ class _AddSubjectState extends State<AddSubject> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: departmentAppBar(context, "Add Subject"),
+      appBar: departmentAppBar(
+        context,
+        "Add Subject",
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       drawer: departmentDrawer(context),
       body: Stack(
         children: [
@@ -100,23 +117,35 @@ class _AddSubjectState extends State<AddSubject> {
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        const Text(
-                          "Add New Subject",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const Icon(
+                          Icons.menu_book_outlined,
+                          color: Colors.white,
+                          size: 28,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Fill in the subject details",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 13,
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Add New Subject",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Fill in the subject details",
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -166,8 +195,8 @@ class _AddSubjectState extends State<AddSubject> {
                         const Text(
                           "Subject Name",
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
                             color: Color(0xFF2563EB),
                           ),
                         ),
@@ -300,9 +329,7 @@ class _AddSubjectState extends State<AddSubject> {
                                       border: isSelected
                                           ? null
                                           : Border.all(
-                                              color: const Color(
-                                                0xFF7C3AED,
-                                              ).withOpacity(0.4),
+                                              color: const Color(0xFF7C3AED),
                                               width: 1.5,
                                             ),
                                       borderRadius: BorderRadius.circular(20),
@@ -313,7 +340,9 @@ class _AddSubjectState extends State<AddSubject> {
                                         color: isSelected
                                             ? Colors.white
                                             : const Color(0xFF7C3AED),
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
                                         fontSize: 13,
                                       ),
                                     ),
@@ -328,7 +357,36 @@ class _AddSubjectState extends State<AddSubject> {
                   ),
                   const SizedBox(height: 24),
 
-                  // REDESIGN 4: Levels Section with Switch widgets
+                  // REDESIGN 4: Levels Section Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        "Levels",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2563EB),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Select levels for this subject",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // REDESIGN 5: Levels Section with Switch widgets
                   StreamBuilder<List<ClassModel>>(
                     stream: context
                         .watch<StudentManagementProvider>()
@@ -389,8 +447,8 @@ class _AddSubjectState extends State<AddSubject> {
                                       const Text(
                                         "Licence",
                                         style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
                                           color: Color(0xFF2563EB),
                                         ),
                                       ),
@@ -449,54 +507,33 @@ class _AddSubjectState extends State<AddSubject> {
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                     horizontal: 14,
-                                                    vertical: 12,
+                                                    vertical: 14,
                                                   ),
                                               child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
                                                 children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          c.name,
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: isSelected
-                                                                ? const Color(
-                                                                    0xFF2563EB,
-                                                                  )
-                                                                : null,
-                                                          ),
-                                                        ),
-                                                        if (!isMeaningless) ...[
-                                                          const SizedBox(
-                                                            height: 2,
-                                                          ),
-                                                          Text(
-                                                            semesterInfo,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors
-                                                                  .grey[500],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                  ),
                                                   if (isSelected)
                                                     const Icon(
-                                                      Icons.check_circle,
+                                                      Icons
+                                                          .check_circle_rounded,
                                                       color: Color(0xFF2563EB),
                                                       size: 24,
                                                     ),
+                                                  if (isSelected)
+                                                    const SizedBox(width: 10),
+                                                  Text(
+                                                    c.name,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.bold
+                                                          : FontWeight.w600,
+                                                      color: isSelected
+                                                          ? const Color(
+                                                              0xFF2563EB,
+                                                            )
+                                                          : null,
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -544,8 +581,8 @@ class _AddSubjectState extends State<AddSubject> {
                                       const Text(
                                         "Master",
                                         style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
                                           color: Color(0xFF7C3AED),
                                         ),
                                       ),
@@ -603,54 +640,33 @@ class _AddSubjectState extends State<AddSubject> {
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                     horizontal: 14,
-                                                    vertical: 12,
+                                                    vertical: 14,
                                                   ),
                                               child: Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
                                                 children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          c.name,
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                            color: isSelected
-                                                                ? const Color(
-                                                                    0xFF7C3AED,
-                                                                  )
-                                                                : null,
-                                                          ),
-                                                        ),
-                                                        if (!isMeaningless) ...[
-                                                          const SizedBox(
-                                                            height: 2,
-                                                          ),
-                                                          Text(
-                                                            semesterInfo,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors
-                                                                  .grey[500],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-                                                  ),
                                                   if (isSelected)
                                                     const Icon(
-                                                      Icons.check_circle,
+                                                      Icons
+                                                          .check_circle_rounded,
                                                       color: Color(0xFF7C3AED),
                                                       size: 24,
                                                     ),
+                                                  if (isSelected)
+                                                    const SizedBox(width: 10),
+                                                  Text(
+                                                    c.name,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.bold
+                                                          : FontWeight.w600,
+                                                      color: isSelected
+                                                          ? const Color(
+                                                              0xFF7C3AED,
+                                                            )
+                                                          : null,
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -704,7 +720,7 @@ class _AddSubjectState extends State<AddSubject> {
                             : const Text(
                                 'Create Subject',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),

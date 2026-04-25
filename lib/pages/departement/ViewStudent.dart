@@ -30,7 +30,14 @@ class ViewStudent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, context.tr('students')),
+      appBar: departmentAppBar(
+        context,
+        context.tr('students'),
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       drawer: departmentDrawer(context),
       body: StreamBuilder(
         stream: context.read<StudentManagementProvider>().watchLevels(),

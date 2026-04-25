@@ -84,7 +84,14 @@ class _AddStudentState extends State<AddStudent> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, "Add Student"),
+      appBar: departmentAppBar(
+        context,
+        "Add Student",
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       drawer: departmentDrawer(context),
       body: Stack(
         children: [

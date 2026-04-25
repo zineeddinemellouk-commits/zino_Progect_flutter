@@ -103,7 +103,14 @@ class _AddTeacherState extends State<AddTeacher> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: departmentAppBar(context, "Add Teacher"),
+      appBar: departmentAppBar(
+        context,
+        "Add Teacher",
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       drawer: departmentDrawer(context),
       body: Stack(
         children: [
@@ -125,7 +132,7 @@ class _AddTeacherState extends State<AddTeacher> {
                     child: Row(
                       children: [
                         const Icon(
-                          Icons.person_add_outlined,
+                          Icons.school_outlined,
                           color: Colors.white,
                           size: 28,
                         ),
@@ -525,7 +532,15 @@ class _AddTeacherState extends State<AddTeacher> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Select groups this teacher will manage",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         StreamBuilder<List<LevelModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
@@ -554,9 +569,7 @@ class _AddTeacherState extends State<AddTeacher> {
                                   ),
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).scaffoldBackgroundColor,
+                                      color: Theme.of(context).cardColor,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border(
                                         left: BorderSide(
@@ -705,8 +718,9 @@ class _AddTeacherState extends State<AddTeacher> {
                                                             ? Colors.white
                                                             : accentColor,
                                                         fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w500,
+                                                        fontWeight: isSelected
+                                                            ? FontWeight.bold
+                                                            : FontWeight.w500,
                                                       ),
                                                     ),
                                                   ),
@@ -731,16 +745,23 @@ class _AddTeacherState extends State<AddTeacher> {
                   // REDESIGN 5: Save Button with full width and better styling
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
-                    child: SizedBox(
+                    child: Container(
                       width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _submitForm,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: const Color(0xFF2563EB),
-                          disabledBackgroundColor: const Color(
-                            0xFF2563EB,
-                          ).withOpacity(0.6),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          disabledBackgroundColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -760,8 +781,8 @@ class _AddTeacherState extends State<AddTeacher> {
                             : const Text(
                                 'Add Teacher',
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),

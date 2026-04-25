@@ -425,6 +425,11 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                                         .toList(),
                                                   );
 
+                                                  // Check if context is still valid after async operation
+                                                  if (!bottomSheetContext
+                                                      .mounted)
+                                                    return;
+
                                                   // Use stored references
                                                   nav.pop();
                                                   messenger.showSnackBar(
@@ -435,6 +440,11 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                                     ),
                                                   );
                                                 } catch (e) {
+                                                  // Check if context is still valid after async operation
+                                                  if (!bottomSheetContext
+                                                      .mounted)
+                                                    return;
+
                                                   // Use stored references - show error but keep sheet open
                                                   messenger.showSnackBar(
                                                     SnackBar(
@@ -597,14 +607,10 @@ class _ViewSubjectsState extends State<ViewSubjects> {
         selectedSection == null
             ? 'View Subjects'
             : 'Subjects - $selectedSection',
-        customLeading: selectedSection != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_rounded),
-                onPressed: () {
-                  setState(() => selectedSection = null);
-                },
-              )
-            : null,
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       drawer: departmentDrawer(context),
       body: StreamBuilder<List<SubjectModel>>(

@@ -8,11 +8,15 @@ class TeacherGroupAttendancePage extends StatefulWidget {
     required this.teacherId,
     required this.teacherEmail,
     required this.group,
+    this.selectedSubjectId,
+    this.selectedSubjectName,
   });
 
   final String teacherId;
   final String teacherEmail;
   final TeacherGroupOverview group;
+  final String? selectedSubjectId;
+  final String? selectedSubjectName;
 
   @override
   State<TeacherGroupAttendancePage> createState() =>
@@ -23,7 +27,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TeachersFirestoreService _service = TeachersFirestoreService();
-  final Map<String, bool> _isPresentByStudentId = <String, bool>{};
+  final Map<String, bool?> _isPresentByStudentId = <String, bool?>{};
   bool _isSubmitting = false;
 
   @override
@@ -102,7 +106,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
 
         final students = snapshot.data ?? const <StudentFeatureModel>[];
         for (final student in students) {
-          _isPresentByStudentId.putIfAbsent(student.id, () => true);
+          _isPresentByStudentId.putIfAbsent(student.id, () => null);
         }
 
         if (students.isEmpty) {
@@ -123,7 +127,9 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final student = students[index];
-                  final isPresent = _isPresentByStudentId[student.id] ?? true;
+                  final attendanceValue = _isPresentByStudentId[student.id];
+                  final isPresent = attendanceValue == true;
+                  final isAbsent = attendanceValue == false;
 
                   return Container(
                     padding: const EdgeInsets.all(12),
@@ -194,7 +200,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                         ),
                         const SizedBox(width: 6),
                         ChoiceChip(
-                          selected: !isPresent,
+                          selected: isAbsent,
                           showCheckmark: false,
                           selectedColor: const Color(0xFFFEE4E2),
                           backgroundColor: const Color(0xFFF2F4F7),
@@ -202,7 +208,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                           label: Text(
                             'Absent',
                             style: TextStyle(
-                              color: !isPresent
+                              color: isAbsent
                                   ? const Color(0xFFB42318)
                                   : const Color(0xFF667085),
                               fontWeight: FontWeight.w700,
@@ -214,6 +220,17 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                             });
                           },
                         ),
+                        if (attendanceValue == null) ...[
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Unmarked',
+                            style: TextStyle(
+                              color: Color(0xFF667085),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   );
@@ -584,17 +601,32 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
   }
 
   Future<void> _submitAttendance(List<StudentFeatureModel> students) async {
+    final hasUnmarkedStudent = students.any(
+      (student) => _isPresentByStudentId[student.id] == null,
+    );
+
+    if (hasUnmarkedStudent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please mark all students before submitting'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
     try {
       final payload = <String, bool>{
         for (final student in students)
-          student.id: _isPresentByStudentId[student.id] ?? true,
+          student.id: _isPresentByStudentId[student.id]!,
       };
 
       await _service.submitGroupAttendance(
         teacherId: widget.teacherId,
         group: widget.group,
         isPresentByStudentId: payload,
+        subjectId: widget.selectedSubjectId,
+        subjectName: widget.selectedSubjectName,
       );
 
       if (!mounted) return;

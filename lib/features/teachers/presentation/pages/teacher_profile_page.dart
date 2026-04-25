@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_attendance_groups_page.dart';
+import 'package:test/features/teachers/presentation/pages/teacher_attendance_history_page.dart';
+import 'package:test/features/teachers/presentation/pages/teacher_profile_detail_page.dart';
+import 'package:test/features/teachers/presentation/pages/teacher_subject_selection_page.dart';
 import 'package:test/services/department_auth_service.dart';
-import 'package:test/main.dart'; // ✅ FIXED
+import 'package:test/main.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key, this.teacherId, this.teacherEmail});
@@ -26,9 +29,14 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
     await _authService.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()), // ✅ FIXED
+      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()),
       (route) => false,
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -41,17 +49,17 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
             teacherId: widget.teacherId,
             teacherEmail: widget.teacherEmail,
           ),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+          builder: (context, dashboardSnapshot) {
+            if (dashboardSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (dashboardSnapshot.hasError) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    'Could not load teacher profile. ${snapshot.error}',
+                    'Could not load teacher profile. ${dashboardSnapshot.error}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Color(0xFF475467)),
                   ),
@@ -59,7 +67,7 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
               );
             }
 
-            final dashboard = snapshot.data;
+            final dashboard = dashboardSnapshot.data;
             if (dashboard == null) {
               return const Center(
                 child: Padding(
@@ -73,11 +81,6 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
               );
             }
 
-            final teacherName = _displayTeacherName(dashboard.teacher.fullName);
-            final attendancePercent = (dashboard.attendanceRate * 100)
-                .clamp(0, 100)
-                .toStringAsFixed(1);
-
             return Column(
               children: [
                 _TopHeader(
@@ -90,198 +93,46 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
                   onLogoutTap: _logout,
                 ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'ACADEMIC OVERVIEW',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: Color(0xFF667085),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Welcome, $teacherName',
-                          style: const TextStyle(
-                            fontSize: 50,
-                            height: 0.95,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF101828),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _SearchField(
-                          onChanged: (value) {
-                            setState(
-                              () => _searchQuery = value.trim().toLowerCase(),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        _MarkAttendanceCard(
-                          onStartSession: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => TeacherAttendanceGroupsPage(
-                                  teacherId: dashboard.teacher.id,
-                                  teacherEmail: dashboard.teacher.email,
-                                ),
+                  child: IndexedStack(
+                    index: _selectedNavIndex,
+                    children: [
+                      // Tab 0: DASHBOARD
+                      _DashboardContent(
+                        dashboard: dashboard,
+                        searchQuery: _searchQuery,
+                        onSearchChanged: (value) {
+                          setState(() => _searchQuery = value.trim().toLowerCase());
+                        },
+                        onStartSession: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TeacherSubjectSelectionPage(
+                                teacherId: dashboard.teacher.id,
+                                teacherEmail: dashboard.teacher.email,
                               ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 18),
-                        _AttendanceRateCard(
-                          attendancePercent: attendancePercent,
-                          bars: dashboard.attendanceBars,
-                        ),
-                        const SizedBox(height: 14),
-                        _MetricCard(
-                          label: 'TOTAL STUDENTS',
-                          value: '${dashboard.students.length}',
-                          valueColor: const Color(0xFF101828),
-                        ),
-                        const SizedBox(height: 12),
-                        _MetricCard(
-                          label: 'ATTENDANCE HISTORY',
-                          value: dashboard.historyCount.toString().padLeft(
-                            2,
-                            '0',
-                          ),
-                          valueColor: const Color(0xFF4A40CF),
-                        ),
-                        const SizedBox(height: 14),
-                        _SmallStatsRow(
-                          subjects: dashboard.subjects.length,
-                          levels: dashboard.levels.length,
-                          groups: dashboard.groups.length,
-                          activeStudents: dashboard.activeStudents,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'History by Group',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        StreamBuilder<List<TeacherAttendanceHistoryItem>>(
-                          stream: _service.watchTeacherAttendanceHistory(
-                            dashboard.teacher.id,
-                          ),
-                          builder: (context, historySnapshot) {
-                            if (historySnapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            }
+                            ),
+                          );
+                        },
+                      ),
 
-                            final allHistory =
-                                historySnapshot.data ??
-                                const <TeacherAttendanceHistoryItem>[];
+                      // Tab 1: ATTENDANCE
+                      TeacherAttendanceGroupsPage(
+                        teacherId: dashboard.teacher.id,
+                        teacherEmail: dashboard.teacher.email,
+                      ),
 
-                            final visibleHistory = allHistory.where((item) {
-                              if (_searchQuery.isEmpty) return true;
-                              return item.groupName.toLowerCase().contains(
-                                    _searchQuery,
-                                  ) ||
-                                  item.levelName.toLowerCase().contains(
-                                    _searchQuery,
-                                  );
-                            }).toList();
+                      // Tab 2: HISTORY
+                      TeacherAttendanceHistoryPage(
+                        teacherId: dashboard.teacher.id,
+                        teacherEmail: dashboard.teacher.email,
+                      ),
 
-                            if (visibleHistory.isEmpty) {
-                              return Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFFE4E7EC),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'No attendance history yet.',
-                                  style: TextStyle(color: Color(0xFF667085)),
-                                ),
-                              );
-                            }
-
-                            return Column(
-                              children: visibleHistory.take(6).map((item) {
-                                return Container(
-                                  width: double.infinity,
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(0xFFE4E7EC),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              '${item.levelName} • ${item.groupName}',
-                                              style: const TextStyle(
-                                                color: Color(0xFF101828),
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                          Text(
-                                            _formatDate(item.createdAt),
-                                            style: const TextStyle(
-                                              color: Color(0xFF667085),
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          _statusChip(
-                                            label:
-                                                'Present ${item.presentCount}',
-                                            color: const Color(0xFF067647),
-                                            bg: const Color(0xFFE7F8EF),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          _statusChip(
-                                            label: 'Absent ${item.absentCount}',
-                                            color: const Color(0xFFB42318),
-                                            bg: const Color(0xFFFEE4E2),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                      // Tab 3: PROFILE
+                      TeacherProfileDetailPage(
+                        teacherId: dashboard.teacher.id,
+                        teacherEmail: dashboard.teacher.email,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -293,14 +144,25 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
         currentIndex: _selectedNavIndex,
         onTap: (index) {
           setState(() => _selectedNavIndex = index);
-          if (index == 0) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(_tabLabel(index))));
         },
       ),
     );
   }
+}
+
+/// Dashboard content widget - contains overview, quick actions, and stats
+class _DashboardContent extends StatelessWidget {
+  const _DashboardContent({
+    required this.dashboard,
+    required this.searchQuery,
+    required this.onSearchChanged,
+    required this.onStartSession,
+  });
+
+  final TeacherDashboardData dashboard;
+  final String searchQuery;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onStartSession;
 
   String _displayTeacherName(String fullName) {
     final name = fullName.trim();
@@ -308,48 +170,72 @@ class _TeacherProfilePageState extends State<TeacherProfilePage> {
     return name;
   }
 
-  String _formatDate(DateTime date) {
-    final y = date.year.toString().padLeft(4, '0');
-    final m = date.month.toString().padLeft(2, '0');
-    final d = date.day.toString().padLeft(2, '0');
-    final hh = date.hour.toString().padLeft(2, '0');
-    final mm = date.minute.toString().padLeft(2, '0');
-    return '$y-$m-$d  $hh:$mm';
-  }
+  @override
+  Widget build(BuildContext context) {
+    final teacherName = _displayTeacherName(dashboard.teacher.fullName);
+    final attendancePercent = (dashboard.attendanceRate * 100)
+        .clamp(0, 100)
+        .toStringAsFixed(1);
 
-  Widget _statusChip({
-    required String label,
-    required Color color,
-    required Color bg,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ACADEMIC OVERVIEW',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: Color(0xFF667085),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Welcome, $teacherName',
+            style: const TextStyle(
+              fontSize: 50,
+              height: 0.95,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF101828),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SearchField(
+            onChanged: onSearchChanged,
+          ),
+          const SizedBox(height: 18),
+          _MarkAttendanceCard(
+            onStartSession: onStartSession,
+          ),
+          const SizedBox(height: 18),
+          _AttendanceRateCard(
+            attendancePercent: attendancePercent,
+            bars: dashboard.attendanceBars,
+          ),
+          const SizedBox(height: 14),
+          _MetricCard(
+            label: 'TOTAL STUDENTS',
+            value: '${dashboard.students.length}',
+            valueColor: const Color(0xFF101828),
+          ),
+          const SizedBox(height: 12),
+          _MetricCard(
+            label: 'ATTENDANCE HISTORY',
+            value: dashboard.historyCount.toString().padLeft(2, '0'),
+            valueColor: const Color(0xFF4A40CF),
+          ),
+          const SizedBox(height: 14),
+          _SmallStatsRow(
+            subjects: dashboard.subjects.length,
+            levels: dashboard.levels.length,
+            groups: dashboard.groups.length,
+            activeStudents: dashboard.activeStudents,
+          ),
+        ],
       ),
     );
-  }
-
-  String _tabLabel(int index) {
-    switch (index) {
-      case 1:
-        return 'Attendance section';
-      case 2:
-        return 'History section';
-      case 3:
-        return 'Profile section';
-      default:
-        return 'Dashboard section';
-    }
   }
 }
 
@@ -615,31 +501,30 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAEFFB),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE4E7EC)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: const TextStyle(
-              color: Color(0xFF667085),
               fontSize: 11,
-              letterSpacing: 0.7,
               fontWeight: FontWeight.w700,
+              letterSpacing: 0.7,
+              color: Color(0xFF667085),
             ),
           ),
-          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              color: valueColor,
-              fontSize: 40,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
-              height: 1,
+              color: valueColor,
             ),
           ),
         ],
@@ -661,42 +546,44 @@ class _SmallStatsRow extends StatelessWidget {
   final int groups;
   final int activeStudents;
 
+  Widget tile(String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE4E7EC)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: Color(0xFF667085),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF101828),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    Widget tile(String title, String value) {
-      return Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE4E7EC)),
-          ),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Color(0xFF667085),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFF101828),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Row(
       children: [
         tile('Subjects', '$subjects'),

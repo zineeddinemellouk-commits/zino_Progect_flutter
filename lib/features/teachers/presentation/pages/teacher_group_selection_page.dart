@@ -138,6 +138,8 @@ class TeacherGroupSelectionPage extends StatelessWidget {
                             teacherId: teacherId,
                             teacherEmail: teacherEmail,
                             group: groupOverview,
+                            selectedSubjectId: selectedSubjectId,
+                            selectedSubjectName: selectedSubjectName,
                           ),
                         ),
                       );

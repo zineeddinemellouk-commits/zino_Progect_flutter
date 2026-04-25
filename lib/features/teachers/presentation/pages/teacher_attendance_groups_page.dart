@@ -7,12 +7,16 @@ class TeacherAttendanceGroupsPage extends StatelessWidget {
     super.key,
     required this.teacherId,
     required this.teacherEmail,
+    this.selectedSubjectId,
+    this.selectedSubjectName,
   });
 
   static const routeName = '/features/teachers/attendance/groups';
 
   final String teacherId;
   final String teacherEmail;
+  final String? selectedSubjectId;
+  final String? selectedSubjectName;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +127,8 @@ class TeacherAttendanceGroupsPage extends StatelessWidget {
                                 teacherId: teacherId,
                                 teacherEmail: teacherEmail,
                                 group: group,
+                                selectedSubjectId: selectedSubjectId,
+                                selectedSubjectName: selectedSubjectName,
                               ),
                             ),
                           );

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:test/features/teachers/presentation/pages/teacher_level_selection_page.dart';
+import 'package:test/features/teachers/presentation/pages/teacher_subject_selection_page.dart';
 
 /// Entry point for the teacher attendance flow.
-/// Initiates the level selection step.
+/// Initiates the subject selection step.
 class TeacherAttendanceFlowPage extends StatelessWidget {
   const TeacherAttendanceFlowPage({
     super.key,
@@ -17,7 +17,7 @@ class TeacherAttendanceFlowPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TeacherLevelSelectionPage(
+    return TeacherSubjectSelectionPage(
       teacherId: teacherId,
       teacherEmail: teacherEmail,
     );

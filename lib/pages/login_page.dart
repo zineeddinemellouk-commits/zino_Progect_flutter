@@ -66,6 +66,35 @@ class _LoginPageState extends State<LoginPage>
     return e.message ?? 'Login failed due to a platform error.';
   }
 
+  Future<void> _showErrorDialog(String title, String message) async {
+    if (!mounted) return;
+    
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 24),
+            const SizedBox(width: 12),
+            Text(title),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+    
+    // Clear password field for easier retry
+    passwordController.clear();
+  }
+
   Future<void> _showForgotPasswordDialog() async {
     final resetEmailController = TextEditingController(
       text: emailController.text.trim(),
@@ -269,7 +298,7 @@ class _LoginPageState extends State<LoginPage>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login as ${profile.role} successful')),
+        SnackBar(content: Text('✅ Login as ${profile.role} successful')),
       );
 
       Navigator.pushReplacement(
@@ -279,6 +308,12 @@ class _LoginPageState extends State<LoginPage>
         ),
       );
     } on FirebaseAuthException catch (e) {
+      if (!mounted) {
+        setState(() => _isSigningIn = false);
+        return;
+      }
+
+      // Handle department account creation if needed
       if (selectedRoleSnapshot == 'Department' && e.code == 'user-not-found') {
         try {
           await authService.createDepartmentAccount(
@@ -296,7 +331,7 @@ class _LoginPageState extends State<LoginPage>
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Department account created successfully.'),
+              content: Text('✅ Department account created successfully.'),
             ),
           );
 
@@ -308,10 +343,11 @@ class _LoginPageState extends State<LoginPage>
           );
           return;
         } on FirebaseAuthException catch (createError) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_authErrorMessage(createError))),
-          );
+          if (!mounted) {
+            setState(() => _isSigningIn = false);
+            return;
+          }
+          await _showErrorDialog('❌ Account Creation Failed', _authErrorMessage(createError));
           return;
         }
       }
@@ -334,7 +370,7 @@ class _LoginPageState extends State<LoginPage>
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Department profile repaired successfully.'),
+              content: Text('✅ Department profile repaired successfully.'),
             ),
           );
 
@@ -346,37 +382,39 @@ class _LoginPageState extends State<LoginPage>
           );
           return;
         } on FirebaseAuthException catch (repairError) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_authErrorMessage(repairError))),
-          );
+          if (!mounted) {
+            setState(() => _isSigningIn = false);
+            return;
+          }
+          await _showErrorDialog('❌ Profile Repair Failed', _authErrorMessage(repairError));
           return;
         }
       }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_authErrorMessage(e))));
+      // Show user-friendly error dialog for other auth failures
+      await _showErrorDialog('❌ Login Failed', _authErrorMessage(e));
     } on FirebaseException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        setState(() => _isSigningIn = false);
+        return;
+      }
       final message = e.message ?? 'A Firebase error occurred. Please try again.';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      await _showErrorDialog('❌ Error', message);
     } on PlatformException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_platformErrorMessage(e))));
+      if (!mounted) {
+        setState(() => _isSigningIn = false);
+        return;
+      }
+      await _showErrorDialog('❌ Platform Error', _platformErrorMessage(e));
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-        const SnackBar(
-          content: Text('Login failed. Please verify your credentials.'),
-        ),
+      if (!mounted) {
+        setState(() => _isSigningIn = false);
+        return;
+      }
+      debugPrint('[LoginPage] ❌ Unexpected error: $e');
+      await _showErrorDialog(
+        '❌ Unexpected Error',
+        'Login failed. Please verify your email and password and try again.',
       );
     } finally {
       if (mounted) {

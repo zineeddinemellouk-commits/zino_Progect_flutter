@@ -75,8 +75,7 @@ class MyApp extends StatelessWidget {
                 return supportedLocale;
               }
             }
-            return supportedLocales.first;
-          },
+            return supportedLocales.first;          },
           builder: (context, child) {
             return Directionality(
               textDirection: localeProvider.isRtl

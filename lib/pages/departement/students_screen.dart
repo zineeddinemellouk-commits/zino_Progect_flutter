@@ -115,12 +115,57 @@ class StudentsScreen extends StatelessWidget {
         showBackButton: true,
       ),
       drawer: departmentDrawer(context),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
+      body: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Students',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    StreamBuilder(
+                      stream: context
+                          .read<StudentManagementProvider>()
+                          .watchStudentsByGroup(groupId: args.group.id),
+                      builder: (context, snapshot) {
+                        final students = snapshot.data ?? const [];
+                        return Text(
+                          '${students.length} students found',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            fontSize: 13,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: StreamBuilder(
                 stream: context
                     .read<StudentManagementProvider>()
@@ -154,14 +199,7 @@ class StudentsScreen extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${students.length} students found',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
                       Expanded(
                         child: ListView.builder(
                           itemCount: students.length,
@@ -187,13 +225,17 @@ class StudentsScreen extends StatelessWidget {
                 },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddStudentDialog(context, args),
-        icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: const Text('Add Student'),
+        backgroundColor: const Color(0xFF2563EB),
+        icon: const Icon(Icons.person_add_outlined, color: Colors.white),
+        label: const Text(
+          'Add Student',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
       bottomNavigationBar: departmentBottomNav(context, 1),
     );

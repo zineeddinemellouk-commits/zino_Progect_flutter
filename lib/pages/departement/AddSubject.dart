@@ -163,6 +163,15 @@ class _AddSubjectState extends State<AddSubject> {
                           ],
                         ),
                         const SizedBox(height: 14),
+                        const Text(
+                          "Subject Name",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _subjectNameController,
                           decoration: InputDecoration(
@@ -396,6 +405,13 @@ class _AddSubjectState extends State<AddSubject> {
                                         final semesterInfo = c.name.length > 2
                                             ? c.name.substring(2).trim()
                                             : '';
+                                        final isSelected =
+                                            _selectedClasses[c.id] ?? false;
+                                        final isMeaningless =
+                                            semesterInfo.isEmpty ||
+                                            semesterInfo == '-' ||
+                                            semesterInfo == 'A' ||
+                                            semesterInfo == '- A';
                                         return Padding(
                                           padding: EdgeInsets.only(
                                             bottom:
@@ -404,76 +420,85 @@ class _AddSubjectState extends State<AddSubject> {
                                                 ? 8
                                                 : 0,
                                           ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(
-                                                context,
-                                              ).scaffoldBackgroundColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.04),
-                                                  blurRadius: 4,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _selectedClasses[c.id] =
+                                                    !isSelected;
+                                              });
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? const Color(
+                                                        0xFF2563EB,
+                                                      ).withOpacity(0.08)
+                                                    : Theme.of(
+                                                        context,
+                                                      ).cardColor,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? const Color(0xFF2563EB)
+                                                      : Colors.grey[300] ??
+                                                            Colors.grey,
+                                                  width: isSelected ? 2 : 1,
                                                 ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 10,
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        c.name,
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      if (semesterInfo
-                                                          .isNotEmpty) ...[
-                                                        const SizedBox(
-                                                          height: 2,
-                                                        ),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 12,
+                                                  ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
                                                         Text(
-                                                          semesterInfo,
+                                                          c.name,
                                                           style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: Colors
-                                                                .grey[500],
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: isSelected
+                                                                ? const Color(
+                                                                    0xFF2563EB,
+                                                                  )
+                                                                : null,
                                                           ),
                                                         ),
+                                                        if (!isMeaningless) ...[
+                                                          const SizedBox(
+                                                            height: 2,
+                                                          ),
+                                                          Text(
+                                                            semesterInfo,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors
+                                                                  .grey[500],
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ],
-                                                    ],
+                                                    ),
                                                   ),
-                                                ),
-                                                Switch(
-                                                  value:
-                                                      _selectedClasses[c.id] ??
-                                                      false,
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      _selectedClasses[c.id] =
-                                                          value;
-                                                    });
-                                                  },
-                                                  activeColor: const Color(
-                                                    0xFF2563EB,
-                                                  ),
-                                                ),
-                                              ],
+                                                  if (isSelected)
+                                                    const Icon(
+                                                      Icons.check_circle,
+                                                      color: Color(0xFF2563EB),
+                                                      size: 24,
+                                                    ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         );
@@ -535,6 +560,13 @@ class _AddSubjectState extends State<AddSubject> {
                                         final semesterInfo = c.name.length > 2
                                             ? c.name.substring(2).trim()
                                             : '';
+                                        final isSelected =
+                                            _selectedClasses[c.id] ?? false;
+                                        final isMeaningless =
+                                            semesterInfo.isEmpty ||
+                                            semesterInfo == '-' ||
+                                            semesterInfo == 'A' ||
+                                            semesterInfo == '- A';
                                         return Padding(
                                           padding: EdgeInsets.only(
                                             bottom:
@@ -542,76 +574,85 @@ class _AddSubjectState extends State<AddSubject> {
                                                 ? 8
                                                 : 0,
                                           ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(
-                                                context,
-                                              ).scaffoldBackgroundColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.04),
-                                                  blurRadius: 4,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _selectedClasses[c.id] =
+                                                    !isSelected;
+                                              });
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? const Color(
+                                                        0xFF7C3AED,
+                                                      ).withOpacity(0.08)
+                                                    : Theme.of(
+                                                        context,
+                                                      ).cardColor,
+                                                border: Border.all(
+                                                  color: isSelected
+                                                      ? const Color(0xFF7C3AED)
+                                                      : Colors.grey[300] ??
+                                                            Colors.grey,
+                                                  width: isSelected ? 2 : 1,
                                                 ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 14,
-                                              vertical: 10,
-                                            ),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        c.name,
-                                                        style: const TextStyle(
-                                                          fontSize: 14,
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                      if (semesterInfo
-                                                          .isNotEmpty) ...[
-                                                        const SizedBox(
-                                                          height: 2,
-                                                        ),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 12,
+                                                  ),
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
                                                         Text(
-                                                          semesterInfo,
+                                                          c.name,
                                                           style: TextStyle(
-                                                            fontSize: 12,
-                                                            color: Colors
-                                                                .grey[500],
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: isSelected
+                                                                ? const Color(
+                                                                    0xFF7C3AED,
+                                                                  )
+                                                                : null,
                                                           ),
                                                         ),
+                                                        if (!isMeaningless) ...[
+                                                          const SizedBox(
+                                                            height: 2,
+                                                          ),
+                                                          Text(
+                                                            semesterInfo,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors
+                                                                  .grey[500],
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ],
-                                                    ],
+                                                    ),
                                                   ),
-                                                ),
-                                                Switch(
-                                                  value:
-                                                      _selectedClasses[c.id] ??
-                                                      false,
-                                                  onChanged: (value) {
-                                                    setState(() {
-                                                      _selectedClasses[c.id] =
-                                                          value;
-                                                    });
-                                                  },
-                                                  activeColor: const Color(
-                                                    0xFF7C3AED,
-                                                  ),
-                                                ),
-                                              ],
+                                                  if (isSelected)
+                                                    const Icon(
+                                                      Icons.check_circle,
+                                                      color: Color(0xFF7C3AED),
+                                                      size: 24,
+                                                    ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         );
@@ -654,9 +695,10 @@ class _AddSubjectState extends State<AddSubject> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                 ),
                               )
                             : const Text(

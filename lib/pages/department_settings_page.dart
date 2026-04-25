@@ -392,7 +392,16 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      appBar: departmentAppBar(context, context.tr('settings')),
+      appBar: departmentAppBar(
+        context,
+        context.tr('settings'),
+        customLeading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
       drawer: departmentDrawer(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

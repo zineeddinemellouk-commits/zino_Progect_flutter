@@ -24,6 +24,8 @@ class _AddTeacherState extends State<AddTeacher> {
   final Set<String> _selectedGroupIds = <String>{};
   final Map<String, String> _groupLevelIds = <String, String>{};
   bool _isSaving = false;
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
 
   @override
   void dispose() {
@@ -177,7 +179,7 @@ class _AddTeacherState extends State<AddTeacher> {
                           Row(
                             children: [
                               Container(
-                                width: 4,
+                                width: 3,
                                 height: 18,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF2563EB),
@@ -260,7 +262,7 @@ class _AddTeacherState extends State<AddTeacher> {
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: !_showPassword,
                             decoration: InputDecoration(
                               labelText: 'Password',
                               fillColor: Theme.of(
@@ -268,6 +270,19 @@ class _AddTeacherState extends State<AddTeacher> {
                               ).scaffoldBackgroundColor,
                               filled: true,
                               prefixIcon: const Icon(Icons.lock),
+                              suffixIcon: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _showPassword = !_showPassword;
+                                  });
+                                },
+                                child: Icon(
+                                  _showPassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -292,7 +307,7 @@ class _AddTeacherState extends State<AddTeacher> {
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _confirmPasswordController,
-                            obscureText: true,
+                            obscureText: !_showConfirmPassword,
                             decoration: InputDecoration(
                               labelText: 'Confirm Password',
                               fillColor: Theme.of(
@@ -300,6 +315,20 @@ class _AddTeacherState extends State<AddTeacher> {
                               ).scaffoldBackgroundColor,
                               filled: true,
                               prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _showConfirmPassword =
+                                        !_showConfirmPassword;
+                                  });
+                                },
+                                child: Icon(
+                                  _showConfirmPassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -347,10 +376,10 @@ class _AddTeacherState extends State<AddTeacher> {
                         Row(
                           children: [
                             Container(
-                              width: 4,
+                              width: 3,
                               height: 18,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7C3AED),
+                                color: const Color(0xFF2563EB),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -360,12 +389,20 @@ class _AddTeacherState extends State<AddTeacher> {
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF7C3AED),
+                                color: Color(0xFF2563EB),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Select subjects this teacher will teach",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         StreamBuilder<List<SubjectModel>>(
                           stream: context
                               .watch<StudentManagementProvider>()
@@ -407,26 +444,37 @@ class _AddTeacherState extends State<AddTeacher> {
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? const Color(0xFF2563EB)
-                                          : Theme.of(context).cardColor,
+                                          : Colors.transparent,
                                       border: isSelected
                                           ? null
                                           : Border.all(
-                                              color: const Color(
-                                                0xFF2563EB,
-                                              ).withOpacity(0.4),
+                                              color: const Color(0xFF2563EB),
                                               width: 1.5,
                                             ),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
-                                    child: Text(
-                                      subject.name,
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF2563EB),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isSelected) ...[
+                                          const Icon(
+                                            Icons.check_circle,
+                                            color: Colors.white,
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Text(
+                                          subject.name,
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : const Color(0xFF2563EB),
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
@@ -459,7 +507,7 @@ class _AddTeacherState extends State<AddTeacher> {
                         Row(
                           children: [
                             Container(
-                              width: 4,
+                              width: 3,
                               height: 18,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF2563EB),
@@ -703,9 +751,10 @@ class _AddTeacherState extends State<AddTeacher> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                 ),
                               )
                             : const Text(

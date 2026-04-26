@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/students/presentation/pages/absence_tracker_page.dart';
+import 'package:test/features/students/presentation/pages/student_attendance_page.dart';
+import 'package:test/features/students/presentation/pages/student_profile_page.dart';
 import 'package:test/main.dart'; // ✅ FIXED
 import 'package:test/services/department_auth_service.dart';
 
@@ -60,54 +62,29 @@ class _StudentsPageState extends State<StudentsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F5FF),
+      backgroundColor: isDark ? Colors.grey[900] : const Color(0xFFF2F5FF),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF2F5FF),
+        backgroundColor: isDark ? Colors.grey[850] : const Color(0xFFF2F5FF),
         elevation: 0,
-        titleSpacing: 16,
-        title: const Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Color(0xFF101828),
-              child: Icon(Icons.school_rounded, color: Colors.white, size: 18),
-            ),
-            SizedBox(width: 10),
-            Text(
-              'Academic Atelier',
-              style: TextStyle(
-                color: Color(0xFF2D3A8C),
-                fontWeight: FontWeight.w700,
-                fontSize: 20,
-              ),
-            ),
-          ],
+        automaticallyImplyLeading: false,
+        title: Text(
+          'Dashboard',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
-          if (!widget.selfViewOnly)
-            IconButton(
-              onPressed: () => _showStudentFormDialog(),
-              icon: const Icon(
-                Icons.person_add_alt_1,
-                color: Color(0xFF2D3A8C),
-              ),
-            ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications are active.')),
-              );
-            },
-            icon: const Icon(
-              Icons.notifications_none,
-              color: Color(0xFF2D3A8C),
-            ),
-          ),
           IconButton(
             onPressed: _logout,
             tooltip: 'Logout',
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFF2D3A8C)),
+            icon: Icon(
+              Icons.logout_rounded,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
         ],
       ),
@@ -146,278 +123,237 @@ class _StudentsPageState extends State<StudentsPage> {
           final activeTerm = DateTime.now().year;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(14, 8, 14, 18),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'WELCOME BACK',
-                  style: TextStyle(
-                    color: Color(0xFF98A2B3),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.7,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  students.isEmpty
-                      ? 'Hello, Student'
-                      : 'Hello, ${students.first.fullName}',
-                  style: const TextStyle(
-                    color: Color(0xFF101828),
-                    fontSize: 44,
-                    height: 1.02,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(
-                      color: Color(0xFF667085),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    children: [
-                      const TextSpan(
-                        text: 'Average attendance is currently at ',
-                      ),
-                      TextSpan(
-                        text: '$avgAttendanceText%. ',
-                        style: const TextStyle(
-                          color: Color(0xFF5145E5),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const TextSpan(
-                        text: 'You\'re doing great this semester!',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
+                // Welcome Card with Blue Gradient
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0D101828),
-                        blurRadius: 20,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Attendance\nSummary',
-                              style: TextStyle(
-                                color: Color(0xFF344054),
-                                fontSize: 34,
-                                height: 1.1,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE7E9FF),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'ACTIVE\nTERM',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Color(0xFF515ECF),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 11,
-                                height: 1.05,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Academic Year $activeTerm-${activeTerm + 1}',
-                        style: const TextStyle(
-                          color: Color(0xFF98A2B3),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
                       const Text(
-                        'TOTAL PRESENT',
+                        'WELCOME BACK',
                         style: TextStyle(
-                          color: Color(0xFF98A2B3),
-                          fontSize: 12,
+                          color: Colors.white60,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        '$presentCount',
-                        style: const TextStyle(
-                          color: Color(0xFF4A40CF),
-                          fontSize: 58,
-                          height: 1,
-                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        '^ +2 this week',
-                        style: TextStyle(
-                          color: Color(0xFF16A34A),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'TOTAL ABSENT',
-                        style: TextStyle(
-                          color: Color(0xFF98A2B3),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                       Text(
-                        '$absentCount',
+                        students.isEmpty
+                            ? 'Hello, Student'
+                            : students.first.fullName,
                         style: const TextStyle(
-                          color: Color(0xFF111827),
-                          fontSize: 56,
-                          height: 1,
-                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'A 1 Unexcused',
-                        style: TextStyle(
-                          color: Color(0xFFDC2626),
+                      const SizedBox(height: 12),
+                      Text(
+                        '$avgAttendanceText% Attendance',
+                        style: const TextStyle(
+                          color: Colors.white70,
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 22),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Stats Row - 3 cards
+                Row(
+                  children: [
+                    // Present Card
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F4FF),
-                          borderRadius: BorderRadius.circular(15),
+                          color: isDark ? Colors.grey[800] : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            SizedBox(
-                              width: 45,
-                              height: 45,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  CircularProgressIndicator(
-                                    strokeWidth: 4,
-                                    value: avgAttendance / 100,
-                                    backgroundColor: const Color(0xFFD6DCFF),
-                                    valueColor:
-                                        const AlwaysStoppedAnimation<Color>(
-                                          Color(0xFF4A40CF),
-                                        ),
-                                  ),
-                                  Text(
-                                    '$avgAttendanceText%',
-                                    style: const TextStyle(
-                                      color: Color(0xFF4A40CF),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
+                            Container(
+                              height: 3,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    avgAttendanceGrade,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1D2939),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    avgAttendanceComment,
-                                    style: const TextStyle(
-                                      color: Color(0xFF98A2B3),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(height: 12),
+                            Text(
+                              '$presentCount',
+                              style: const TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Present',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.grey,
+                                fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Absent Card
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[800] : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 3,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '$absentCount',
+                              style: const TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Absent',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Rate Card
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[800] : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              height: 3,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '$avgAttendanceText%',
+                              style: const TextStyle(
+                                color: Color(0xFF2563EB),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Rate',
+                              style: TextStyle(
+                                color: isDark ? Colors.white70 : Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
+                // Pending Absence Action Card - Redesigned
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4636D9),
-                    borderRadius: BorderRadius.circular(18),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2563EB), Color(0xFF1e40af)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.badge_outlined, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text(
-                            'Pending Absence Action',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
                       Text(
-                        students.isEmpty
-                            ? 'No students yet. Add a student to start tracking attendance.'
-                            : 'Review absences and update attendance records from Firestore in real time.',
-                        style: const TextStyle(
-                          color: Color(0xFFD9D6FF),
-                          fontSize: 13,
-                          height: 1.4,
+                        'Pending Absences',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 4),
+                      Text(
+                        'You have ${(firstStudent?.pendingAbsence ?? 0)} pending absence${(firstStudent?.pendingAbsence ?? 0) != 1 ? 's' : ''}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -430,73 +366,21 @@ class _StudentsPageState extends State<StudentsPage> {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFF4636D9),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: const Color(0xFF2563EB),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           child: const Text(
-                            'SUBMIT JUSTIFICATION',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDCE5FF),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Need help?',
-                              style: TextStyle(
-                                color: Color(0xFF4A40CF),
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 6),
-                            Text(
-                              'Check the student handbook for attendance policies and guidelines.',
-                              style: TextStyle(
-                                color: Color(0xFF475467),
-                                fontSize: 14,
-                                height: 1.3,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (!widget.selfViewOnly)
-                        InkWell(
-                          onTap: () => _showStudentFormDialog(),
-                          borderRadius: BorderRadius.circular(24),
-                          child: Container(
-                            width: 46,
-                            height: 46,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.note_add_rounded,
-                              color: Color(0xFF4A40CF),
+                            'Submit Justification',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -531,18 +415,21 @@ class _StudentsPageState extends State<StudentsPage> {
               icon: Icons.how_to_reg_rounded,
               label: 'ATTENDANCE',
               active: _selectedNavIndex == 1,
-              onTap: () => setState(() => _selectedNavIndex = 1),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const StudentAttendancePage(),
+                  ),
+                );
+              },
             ),
             _NavItem(
               icon: Icons.assignment_rounded,
               label: 'REQUESTS',
               active: _selectedNavIndex == 2,
               onTap: () {
-                setState(() => _selectedNavIndex = 2);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Justification is disabled now.'),
-                  ),
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AbsenceTrackerPage()),
                 );
               },
             ),
@@ -550,7 +437,11 @@ class _StudentsPageState extends State<StudentsPage> {
               icon: Icons.person_rounded,
               label: 'PROFILE',
               active: _selectedNavIndex == 3,
-              onTap: () => setState(() => _selectedNavIndex = 3),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StudentProfilePage()),
+                );
+              },
             ),
           ],
         ),

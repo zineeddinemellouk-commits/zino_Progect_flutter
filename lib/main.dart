@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:test/firebase_options.dart';
-import 'pages/login_page.dart';
 import 'package:test/pages/departement/ViewStudent.dart';
 import 'package:test/pages/departement/groups_screen.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
@@ -87,7 +86,7 @@ class MyApp extends StatelessWidget {
           initialRoute: '/login',
           routes: {
             '/login': (_) => const HodooriLoginScreen(),
-            '/': (_) => const LoginPage(),
+            '/': (_) => const HodooriLoginScreen(),
             ViewStudent.routeName: (_) => const ViewStudent(),
             DepartmentSettingsPage.routeName: (_) =>
                 const DepartmentSettingsPage(),

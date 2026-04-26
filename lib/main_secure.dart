@@ -8,7 +8,7 @@ import 'package:test/firebase_options.dart';
 import 'package:test/services/role_manager.dart';
 import 'package:test/services/auth_service.dart';
 import 'package:test/pages/protected_dashboards.dart';
-import 'package:test/pages/login_page.dart';
+import 'package:test/main.dart' show HodooriLoginScreen;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
         home: const _AuthGate(),
         // Named routes for protected navigation
         routes: {
-          '/login': (_) => const LoginPage(),
+          '/login': (_) => const HodooriLoginScreen(),
           '/student-dashboard': (_) => const StudentDashboard(),
           '/teacher-dashboard': (_) => const TeacherDashboard(),
           '/department-dashboard': (_) => const DepartmentDashboard(),
@@ -119,7 +119,7 @@ class _AuthGateState extends State<_AuthGate> {
               context.read<RoleManager>().clearRole();
             }
           });
-          return const LoginPage();
+          return const HodooriLoginScreen();
         }
 
         // User is logged in - show the role-aware router

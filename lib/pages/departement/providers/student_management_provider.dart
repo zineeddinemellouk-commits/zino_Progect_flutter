@@ -181,6 +181,10 @@ class StudentManagementProvider extends ChangeNotifier {
     return _firestoreService.watchAllStudents();
   }
 
+  Stream<AttendanceOverviewStats> watchAttendanceOverview() {
+    return _firestoreService.watchAttendanceOverview();
+  }
+
   Stream<List<TeacherModel>> watchTeachers() {
     return _firestoreService.watchTeachers();
   }

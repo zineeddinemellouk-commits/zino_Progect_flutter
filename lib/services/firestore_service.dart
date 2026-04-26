@@ -8,6 +8,18 @@ import 'package:test/models/student_model.dart';
 import 'package:test/models/subject_model.dart';
 import 'package:test/models/teacher_model.dart';
 
+class AttendanceOverviewStats {
+  const AttendanceOverviewStats({
+    required this.totalStudents,
+    required this.averageAttendanceRate,
+    required this.averageAttendancePoints,
+  });
+
+  final int totalStudents;
+  final double averageAttendanceRate;
+  final double averageAttendancePoints;
+}
+
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -30,6 +42,69 @@ class FirestoreService {
       _firestore.collection('justifications');
   CollectionReference<Map<String, dynamic>> get _absences =>
       _firestore.collection('absences');
+
+  /// Aggregated attendance data for department dashboards.
+  ///
+  /// The overall attendance rate is calculated from all student documents in
+  /// Firestore with this fallback order per student:
+  /// 1) totalPresence/totalAbsence (live attendance session data)
+  /// 2) attendanceRate (stored as 0..1 or 0..100)
+  /// 3) attendancePercentage (legacy field)
+  Stream<AttendanceOverviewStats> watchAttendanceOverview() {
+    return _students.snapshots().map((snapshot) {
+      final docs = snapshot.docs;
+      if (docs.isEmpty) {
+        return const AttendanceOverviewStats(
+          totalStudents: 0,
+          averageAttendanceRate: 0,
+          averageAttendancePoints: 0,
+        );
+      }
+
+      final totalAttendancePoints = docs.fold<double>(
+        0,
+        (sum, doc) => sum + _resolveStudentAttendancePercentage(doc.data()),
+      );
+
+      final averageAttendancePoints = totalAttendancePoints / docs.length;
+      final normalizedAverage = _normalizeAttendanceRate(averageAttendancePoints);
+
+      return AttendanceOverviewStats(
+        totalStudents: docs.length,
+        averageAttendanceRate: normalizedAverage,
+        averageAttendancePoints: normalizedAverage,
+      );
+    });
+  }
+
+  double _resolveStudentAttendancePercentage(Map<String, dynamic> data) {
+    final totalPresence = (data['totalPresence'] as num?)?.toDouble() ?? 0;
+    final totalAbsence = (data['totalAbsence'] as num?)?.toDouble() ?? 0;
+    final totalSessions = totalPresence + totalAbsence;
+
+    if (totalSessions > 0) {
+      return _normalizeAttendanceRate((totalPresence / totalSessions) * 100);
+    }
+
+    final rawAttendanceRate = (data['attendanceRate'] as num?)?.toDouble();
+    if (rawAttendanceRate != null) {
+      final normalizedRate = rawAttendanceRate <= 1
+          ? rawAttendanceRate * 100
+          : rawAttendanceRate;
+      return _normalizeAttendanceRate(normalizedRate);
+    }
+
+    final attendancePercentage =
+        (data['attendancePercentage'] as num?)?.toDouble() ?? 0;
+    return _normalizeAttendanceRate(attendancePercentage);
+  }
+
+  double _normalizeAttendanceRate(double attendancePoints) {
+    if (attendancePoints.isNaN || attendancePoints.isInfinite) {
+      return 0;
+    }
+    return attendancePoints.clamp(0, 100).toDouble();
+  }
 
   Future<void> ensureBaseData() async {
     final levelsSnapshot = await _levels.limit(1).get();
@@ -112,6 +187,18 @@ class FirestoreService {
               .map((doc) => StudentModel.fromMap(doc.id, doc.data()))
               .toList(),
         );
+  }
+
+  double calculateOverallAttendanceRate(List<StudentModel> students) {
+    if (students.isEmpty) {
+      return 0;
+    }
+
+    final totalAttendancePoints = students.fold<int>(
+      0,
+      (sum, student) => sum + student.attendancePercentage,
+    );
+    return _normalizeAttendanceRate(totalAttendancePoints / students.length);
   }
 
   Future<String> addGroup({

@@ -128,9 +128,11 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
             onPressed: _isChangingPassword
                 ? null
                 : () async {
-                    final currentPassword = currentPasswordController.text.trim();
+                    final currentPassword = currentPasswordController.text
+                        .trim();
                     final newPassword = newPasswordController.text.trim();
-                    final confirmPassword = confirmPasswordController.text.trim();
+                    final confirmPassword = confirmPasswordController.text
+                        .trim();
 
                     // Validation
                     if (currentPassword.isEmpty) {
@@ -149,7 +151,9 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                     }
 
                     if (newPassword.length < 6) {
-                      _showErrorMessage('Password must be at least 6 characters');
+                      _showErrorMessage(
+                        'Password must be at least 6 characters',
+                      );
                       return;
                     }
 
@@ -161,7 +165,9 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                         throw Exception('No authenticated user found');
                       }
 
-                      print('[TeacherProfile] 🔐 Attempting password change for ${user!.email}');
+                      print(
+                        '[TeacherProfile] 🔐 Attempting password change for ${user!.email}',
+                      );
 
                       // Step 1: Reauthenticate with current password
                       print('[TeacherProfile] Step 1: Reauthenticating...');
@@ -203,18 +209,22 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                       confirmPasswordController.dispose();
                     } on FirebaseAuthException catch (e) {
                       setState(() => _isChangingPassword = false);
-                      
-                      print('[TeacherProfile] ❌ Firebase Auth Error: ${e.code} - ${e.message}');
-                      
+
+                      print(
+                        '[TeacherProfile] ❌ Firebase Auth Error: ${e.code} - ${e.message}',
+                      );
+
                       String errorMessage = 'Failed to change password';
                       if (e.code == 'wrong-password') {
                         errorMessage = 'Current password is incorrect';
                       } else if (e.code == 'weak-password') {
                         errorMessage = 'New password is too weak';
                       } else if (e.code == 'requires-recent-login') {
-                        errorMessage = 'Please logout and login again before changing password';
+                        errorMessage =
+                            'Please logout and login again before changing password';
                       } else if (e.code == 'user-mismatch') {
-                        errorMessage = 'User account mismatch. Please try again.';
+                        errorMessage =
+                            'User account mismatch. Please try again.';
                       } else {
                         errorMessage = e.message ?? errorMessage;
                       }
@@ -225,9 +235,12 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                     } catch (e) {
                       setState(() => _isChangingPassword = false);
                       print('[TeacherProfile] ❌ Unexpected Error: $e');
-                      
+
                       if (dialogContext.mounted) {
-                        _showErrorMessageInDialog(dialogContext, 'An unexpected error occurred: $e');
+                        _showErrorMessageInDialog(
+                          dialogContext,
+                          'An unexpected error occurred: $e',
+                        );
                       }
                     }
                   },
@@ -274,15 +287,35 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F4FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF1F1F4),
         elevation: 0,
-        title: const Text(
-          'My Profile',
-          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        titleSpacing: 12,
+        title: const Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: Color(0xFF0F2E46),
+              child: Icon(Icons.person, color: Color(0xFF8ED8C5), size: 20),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Profile',
+              style: TextStyle(
+                color: Color(0xFF101828),
+                fontWeight: FontWeight.w700,
+                fontSize: 28,
+              ),
+            ),
+          ],
         ),
-        centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 10),
+            child: Icon(Icons.settings, color: Color(0xFF5B4EF3), size: 26),
+          ),
+        ],
       ),
       body: StreamBuilder<TeacherDashboardData?>(
         stream: _service.watchTeacherDashboard(
@@ -331,59 +364,82 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Avatar with initials
                 Container(
-                  width: 100,
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF1565C0), Color(0xFF0D47A1)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE7EBF5),
+                    borderRadius: BorderRadius.circular(30),
                   ),
-                  child: Center(
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 130,
+                        height: 130,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          color: const Color(0xFF174A5A),
+                        ),
+                        child: Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 44,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD8D2FB),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'SCHOLAR ID: ${_buildScholarId(teacher.id)}',
+                          style: const TextStyle(
+                            color: Color(0xFF4A40CF),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        _formatDisplayName(teacher.fullName),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF0F1F3D),
+                          fontSize: 66,
+                          height: 0.98,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _profileInfoRow(
+                        icon: Icons.mail_outline,
+                        text: teacher.email,
+                      ),
+                      const SizedBox(height: 6),
+                      _profileInfoRow(
+                        icon: Icons.school_outlined,
+                        text: _buildFacultyText(dashboard),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Teacher Name
-                Text(
-                  teacher.fullName,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Email
-                Text(
-                  teacher.email,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 26),
 
                 // Divider
-                Container(
-                  height: 1,
-                  color: Colors.grey.shade200,
-                ),
+                Container(height: 1, color: Colors.grey.shade300),
                 const SizedBox(height: 24),
 
                 // Subjects Section
@@ -452,10 +508,8 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: groups.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        color: Colors.grey.shade200,
-                      ),
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: Colors.grey.shade200),
                       itemBuilder: (_, index) {
                         final group = groups[index];
                         return Padding(
@@ -516,10 +570,7 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
                 ],
 
                 // Divider
-                Container(
-                  height: 1,
-                  color: Colors.grey.shade200,
-                ),
+                Container(height: 1, color: Colors.grey.shade200),
                 const SizedBox(height: 24),
 
                 // Change Password Button
@@ -584,5 +635,46 @@ class _TeacherProfileDetailPageState extends State<TeacherProfileDetailPage> {
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  String _buildScholarId(String teacherId) {
+    final clean = teacherId.trim().toUpperCase();
+    if (clean.isEmpty) return '2026-TEACHER';
+    if (clean.length <= 10) return clean;
+    return clean.substring(0, 10);
+  }
+
+  String _formatDisplayName(String fullName) {
+    final name = fullName.trim();
+    if (name.isEmpty) return 'Teacher';
+    return name.replaceAll(' ', '\n');
+  }
+
+  String _buildFacultyText(TeacherDashboardData dashboard) {
+    if (dashboard.levels.isNotEmpty) {
+      return 'Faculty • ${dashboard.levels.first.name}';
+    }
+    return 'Faculty of Sciences';
+  }
+
+  Widget _profileInfoRow({required IconData icon, required String text}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF5B4EF3)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF25324B),
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

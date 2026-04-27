@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/models/absence_model.dart';
 import 'package:test/models/class_model.dart';
 import 'package:test/models/exclusion_model.dart';
@@ -384,6 +385,70 @@ class FirestoreService {
       'teacherId': teacherId,
       'classIds': classIds,
     });
+  }
+
+  Future<SubjectModel> getSubjectById(String subjectId) async {
+    final id = subjectId.trim();
+    if (id.isEmpty) {
+      throw Exception('Subject ID cannot be empty');
+    }
+
+    final doc = await _subjects.doc(id).get();
+    if (!doc.exists) {
+      throw Exception('Subject not found');
+    }
+
+    return SubjectModel.fromMap(
+      doc.id,
+      doc.data() ?? const <String, dynamic>{},
+    );
+  }
+
+  Future<void> updateSubjectFromEditor({
+    required String subjectId,
+    required String name,
+    String? teacherId,
+  }) async {
+    final normalizedId = subjectId.trim();
+    final normalizedName = name.trim();
+
+    if (normalizedId.isEmpty) {
+      throw Exception('Subject ID cannot be empty');
+    }
+    if (normalizedName.isEmpty) {
+      throw Exception('Subject name cannot be empty');
+    }
+
+    await _subjects.doc(normalizedId).update({
+      'name': normalizedName,
+      'teacherId': (teacherId ?? '').trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    await _syncSubjectUpdateToSupabase(
+      subjectId: normalizedId,
+      name: normalizedName,
+      teacherId: teacherId,
+    );
+  }
+
+  Future<void> _syncSubjectUpdateToSupabase({
+    required String subjectId,
+    required String name,
+    String? teacherId,
+  }) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final payload = <String, dynamic>{'name': name};
+      final normalizedTeacherId = (teacherId ?? '').trim();
+      if (normalizedTeacherId.isNotEmpty) {
+        payload['teacher_id'] = normalizedTeacherId;
+      }
+
+      await supabase.from('subjects').update(payload).eq('id', subjectId);
+    } catch (_) {
+      // Keep Firestore as source of truth and never crash UI on mirror sync failure.
+    }
   }
 
   Future<void> deleteSubject(String id) => _subjects.doc(id).delete();

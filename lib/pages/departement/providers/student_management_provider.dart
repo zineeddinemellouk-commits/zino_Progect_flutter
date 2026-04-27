@@ -322,6 +322,43 @@ class StudentManagementProvider extends ChangeNotifier {
     }
   }
 
+  Future<SubjectModel> getSubjectById(String subjectId) async {
+    try {
+      final id = subjectId.trim();
+      if (id.isEmpty) throw Exception('Subject ID cannot be empty');
+      return await _firestoreService.getSubjectById(id);
+    } catch (e) {
+      if (kDebugMode) print('❌ Error loading subject by ID: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateSubjectFromEditor({
+    required String subjectId,
+    required String name,
+    String? teacherId,
+  }) async {
+    try {
+      final id = subjectId.trim();
+      final normalizedName = name.trim();
+
+      if (id.isEmpty) throw Exception('Subject ID cannot be empty');
+      if (normalizedName.isEmpty) {
+        throw Exception('Subject name cannot be empty');
+      }
+
+      await _firestoreService.updateSubjectFromEditor(
+        subjectId: id,
+        name: normalizedName,
+        teacherId: teacherId,
+      );
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error updating subject from editor: $e');
+      rethrow;
+    }
+  }
+
   Future<void> updateJustificationStatus({
     required String id,
     required String status,

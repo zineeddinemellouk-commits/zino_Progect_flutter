@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:test/models/class_model.dart';
 import 'package:test/models/subject_model.dart';
 import 'package:test/models/teacher_model.dart';
+import 'package:test/pages/departement/edit_subject_page.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
 
@@ -121,404 +122,6 @@ class _ViewSubjectsState extends State<ViewSubjects> {
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to delete subject: $e')));
     }
-  }
-
-  Future<void> _showEditDialog(
-    BuildContext context,
-    SubjectModel subject,
-  ) async {
-    final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController(text: subject.name);
-    String selectedTeacherId = subject.teacherId;
-    final selectedClasses = <String>{...subject.classIds};
-    var isSaving = false;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (_, setDialogState) {
-            return Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-                color: Theme.of(context).scaffoldBackgroundColor,
-              ),
-              child: DraggableScrollableSheet(
-                expand: false,
-                initialChildSize: 0.8,
-                minChildSize: 0.5,
-                maxChildSize: 0.95,
-                builder: (_, scrollController) {
-                  return Form(
-                    key: formKey,
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Drag Handle
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          // Header with gradient
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF2563EB), Color(0xFF004AC6)],
-                              ),
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(24),
-                              ),
-                            ),
-                            child: const Text(
-                              'Edit Subject',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          // Content
-                          Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Subject Name Field
-                                Text(
-                                  'Subject Name',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: nameController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter subject name',
-                                    fillColor: Theme.of(
-                                      context,
-                                    ).scaffoldBackgroundColor,
-                                    filled: true,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: Colors.grey[300]!,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFF2563EB),
-                                        width: 2,
-                                      ),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    if ((value ?? '').trim().isEmpty) {
-                                      return 'Subject name is required';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 20),
-                                // Teacher Field
-                                Text(
-                                  'Teacher',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                StreamBuilder<List<TeacherModel>>(
-                                  stream: context
-                                      .read<StudentManagementProvider>()
-                                      .watchTeachers(),
-                                  builder: (context, teacherSnapshot) {
-                                    final teachers =
-                                        teacherSnapshot.data ??
-                                        const <TeacherModel>[];
-                                    final isTeacherSelected =
-                                        selectedTeacherId.isNotEmpty &&
-                                        teachers.any(
-                                          (t) => t.id == selectedTeacherId,
-                                        );
-
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).scaffoldBackgroundColor,
-                                        border: Border.all(
-                                          color: const Color(0xFFE5E7EB),
-                                          width: 1,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 0,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.person_outline,
-                                            size: 20,
-                                            color: Color(0xFF2563EB),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: DropdownButton<String>(
-                                              isExpanded: true,
-                                              underline:
-                                                  const SizedBox.shrink(),
-                                              value: isTeacherSelected
-                                                  ? selectedTeacherId
-                                                  : null,
-                                              hint: const Text(
-                                                'Select a teacher',
-                                              ),
-                                              items: teachers
-                                                  .map(
-                                                    (
-                                                      teacher,
-                                                    ) => DropdownMenuItem(
-                                                      value: teacher.id,
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          Text(
-                                                            teacher.fullName,
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                ),
-                                                          ),
-                                                          Text(
-                                                            teacher.email,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors
-                                                                  .grey[500],
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  )
-                                                  .toList(),
-                                              onChanged: (value) {
-                                                setDialogState(() {
-                                                  selectedTeacherId =
-                                                      value ?? '';
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-
-                                const SizedBox(height: 28),
-                                // Action Buttons
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: isSaving
-                                            ? null
-                                            : () => Navigator.of(
-                                                bottomSheetContext,
-                                              ).pop(),
-                                        style: OutlinedButton.styleFrom(
-                                          side: BorderSide(
-                                            color: Colors.grey[400]!,
-                                            width: 1,
-                                          ),
-                                          foregroundColor: Colors.grey[600],
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                        ),
-                                        child: const Text('Cancel'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      flex: 2,
-                                      child: ElevatedButton(
-                                        onPressed: isSaving
-                                            ? null
-                                            : () async {
-                                                if (formKey.currentState
-                                                        ?.validate() !=
-                                                    true)
-                                                  return;
-
-                                                setDialogState(
-                                                  () => isSaving = true,
-                                                );
-
-                                                // Store references BEFORE async call
-                                                final nav = Navigator.of(
-                                                  bottomSheetContext,
-                                                );
-                                                final messenger =
-                                                    ScaffoldMessenger.of(
-                                                      bottomSheetContext,
-                                                    );
-                                                final provider = context
-                                                    .read<
-                                                      StudentManagementProvider
-                                                    >();
-
-                                                try {
-                                                  await provider.updateSubject(
-                                                    id: subject.id,
-                                                    name: nameController.text,
-                                                    teacherId:
-                                                        selectedTeacherId,
-                                                    classIds: selectedClasses
-                                                        .toList(),
-                                                  );
-
-                                                  // Check if context is still valid after async operation
-                                                  if (!bottomSheetContext
-                                                      .mounted)
-                                                    return;
-
-                                                  // Use stored references
-                                                  nav.pop();
-                                                  messenger.showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Subject updated successfully.',
-                                                      ),
-                                                    ),
-                                                  );
-                                                } catch (e) {
-                                                  // Check if context is still valid after async operation
-                                                  if (!bottomSheetContext
-                                                      .mounted)
-                                                    return;
-
-                                                  // Use stored references - show error but keep sheet open
-                                                  messenger.showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        'Failed to update subject: $e',
-                                                      ),
-                                                    ),
-                                                  );
-                                                } finally {
-                                                  if (bottomSheetContext
-                                                      .mounted) {
-                                                    setDialogState(
-                                                      () => isSaving = false,
-                                                    );
-                                                  }
-                                                }
-                                              },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(
-                                            0xFF2563EB,
-                                          ),
-                                          disabledBackgroundColor: const Color(
-                                            0xFF2563EB,
-                                          ).withOpacity(0.5),
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                        ),
-                                        child: isSaving
-                                            ? SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(Colors.white),
-                                                ),
-                                              )
-                                            : const Text(
-                                                'Save',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    nameController.dispose();
   }
 
   void _showSubjectDetailSheet(
@@ -675,9 +278,6 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                     .watchClasses(),
                 builder: (context, classSnapshot) {
                   final classes = classSnapshot.data ?? const <ClassModel>[];
-                  final classById = <String, ClassModel>{
-                    for (final item in classes) item.id: item,
-                  };
 
                   // Level 1: Show sections
                   if (selectedSection == null) {
@@ -904,10 +504,6 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                               final teacher = teacherById[subject.teacherId];
                               final teacherName =
                                   teacher?.fullName ?? 'Unassigned';
-                              final assignedClasses = subject.classIds
-                                  .map((id) => classById[id])
-                                  .whereType<ClassModel>()
-                                  .toList();
 
                               return GestureDetector(
                                 onTap: () => _showSubjectDetailSheet(
@@ -959,8 +555,32 @@ class _ViewSubjectsState extends State<ViewSubjects> {
                                           ),
                                           const SizedBox(width: 12),
                                           GestureDetector(
-                                            onTap: () {
-                                              _showEditDialog(context, subject);
+                                            onTap: () async {
+                                              final updated =
+                                                  await Navigator.of(
+                                                    context,
+                                                  ).push<bool>(
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          EditSubjectPage(
+                                                            subjectId:
+                                                                subject.id,
+                                                          ),
+                                                    ),
+                                                  );
+
+                                              if (updated == true &&
+                                                  context.mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Subject updated successfully.',
+                                                    ),
+                                                  ),
+                                                );
+                                              }
                                             },
                                             child: Icon(
                                               Icons.edit_outlined,

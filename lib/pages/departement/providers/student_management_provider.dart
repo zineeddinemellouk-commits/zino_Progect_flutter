@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:test/models/class_model.dart';
+import 'package:test/models/exclusion_model.dart';
 import 'package:test/models/group_model.dart';
 import 'package:test/models/justification_model.dart';
 import 'package:test/models/level_model.dart';
@@ -201,6 +202,10 @@ class StudentManagementProvider extends ChangeNotifier {
     return _firestoreService.watchJustifications();
   }
 
+  Stream<List<ExclusionModel>> watchPendingExclusions() {
+    return _firestoreService.watchPendingExclusions();
+  }
+
   Future<void> addTeacher({
     required String fullName,
     required String email,
@@ -327,6 +332,14 @@ class StudentManagementProvider extends ChangeNotifier {
       status: status,
       refusalReason: refusalReason,
     );
+    notifyListeners();
+  }
+
+  Future<void> updateExclusionStatus({
+    required String id,
+    required String status,
+  }) async {
+    await _firestoreService.updateExclusionStatus(id: id, status: status);
     notifyListeners();
   }
 

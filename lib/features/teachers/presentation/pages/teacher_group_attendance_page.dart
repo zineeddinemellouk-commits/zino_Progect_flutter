@@ -27,13 +27,25 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TeachersFirestoreService _service = TeachersFirestoreService();
-  final Map<String, bool?> _isPresentByStudentId = <String, bool?>{};
+  late final Stream<List<StudentFeatureModel>> _studentsStream;
+  late final Stream<Map<String, TeacherStudentExclusion>> _exclusionsStream;
+  final List<_StudentAttendanceRecord> _attendanceRecords =
+      <_StudentAttendanceRecord>[];
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _studentsStream = _service.watchTeacherGroupStudents(
+      teacherId: widget.teacherId,
+      teacherEmail: widget.teacherEmail,
+      groupId: widget.group.groupId,
+    );
+    _exclusionsStream = _service.watchTeacherSubjectExclusions(
+      teacherId: widget.teacherId,
+      subjectId: (widget.selectedSubjectId ?? '').trim(),
+    );
   }
 
   @override
@@ -84,203 +96,142 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
   }
 
   Widget _buildAttendanceTab() {
-    return StreamBuilder<List<StudentFeatureModel>>(
-      stream: _service.watchTeacherGroupStudents(
-        teacherId: widget.teacherId,
-        teacherEmail: widget.teacherEmail,
-        groupId: widget.group.groupId,
-      ),
+    return StreamBuilder<Map<String, TeacherStudentExclusion>>(
+      stream: _exclusionsStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        final exclusionsByStudentDocId =
+            snapshot.data ?? const <String, TeacherStudentExclusion>{};
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text('Could not load students: ${snapshot.error}'),
-            ),
-          );
-        }
+        return StreamBuilder<List<StudentFeatureModel>>(
+          stream: _studentsStream,
+          builder: (context, studentsSnapshot) {
+            if (studentsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        final students = snapshot.data ?? const <StudentFeatureModel>[];
-        for (final student in students) {
-          _isPresentByStudentId.putIfAbsent(student.id, () => null);
-        }
-
-        if (students.isEmpty) {
-          return const Center(
-            child: Text(
-              'No students in this group.',
-              style: TextStyle(color: Color(0xFF667085)),
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-                itemCount: students.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final student = students[index];
-                  final attendanceValue = _isPresentByStudentId[student.id];
-                  final isPresent = attendanceValue == true;
-                  final isAbsent = attendanceValue == false;
-
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE4E7EC)),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: const Color(0xFFE8ECFF),
-                          child: Text(
-                            student.fullName.isEmpty
-                                ? '?'
-                                : student.fullName[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF4A40CF),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                student.fullName,
-                                style: const TextStyle(
-                                  color: Color(0xFF101828),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                student.email,
-                                style: const TextStyle(
-                                  color: Color(0xFF667085),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          selected: isPresent,
-                          showCheckmark: false,
-                          selectedColor: const Color(0xFFE7F8EF),
-                          backgroundColor: const Color(0xFFF2F4F7),
-                          side: BorderSide.none,
-                          label: Text(
-                            'Present',
-                            style: TextStyle(
-                              color: isPresent
-                                  ? const Color(0xFF067647)
-                                  : const Color(0xFF667085),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          onSelected: (_) {
-                            setState(() {
-                              _isPresentByStudentId[student.id] = true;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 6),
-                        ChoiceChip(
-                          selected: isAbsent,
-                          showCheckmark: false,
-                          selectedColor: const Color(0xFFFEE4E2),
-                          backgroundColor: const Color(0xFFF2F4F7),
-                          side: BorderSide.none,
-                          label: Text(
-                            'Absent',
-                            style: TextStyle(
-                              color: isAbsent
-                                  ? const Color(0xFFB42318)
-                                  : const Color(0xFF667085),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          onSelected: (_) {
-                            setState(() {
-                              _isPresentByStudentId[student.id] = false;
-                            });
-                          },
-                        ),
-                        if (attendanceValue == null) ...[
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Unmarked',
-                            style: TextStyle(
-                              color: Color(0xFF667085),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Color(0xFFE4E7EC))),
-              ),
-              child: SafeArea(
-                top: false,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting
-                        ? null
-                        : () => _submitAttendance(students),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4A40CF),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      textStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Submit Attendance'),
+            if (studentsSnapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'Could not load students: ${studentsSnapshot.error}',
                   ),
                 ),
-              ),
-            ),
-          ],
+              );
+            }
+
+            final students =
+                studentsSnapshot.data ?? const <StudentFeatureModel>[];
+            _syncAttendanceRecords(students, exclusionsByStudentDocId);
+
+            if (students.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No students in this group.',
+                  style: TextStyle(color: Color(0xFF667085)),
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+                    itemCount: _attendanceRecords.length,
+                    itemBuilder: (context, index) {
+                      final record = _attendanceRecords[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == _attendanceRecords.length - 1
+                              ? 0
+                              : 10,
+                        ),
+                        child: _StudentAttendanceItem(
+                          key: ValueKey(record.student.id),
+                          student: record.student,
+                          initialAttendanceStatus: record.attendanceStatus,
+                          isExcluded: record.isExcluded,
+                          exclusionStatus: record.exclusionStatus,
+                          totalAbsences: record.exclusionTotalAbsences,
+                          enabled: !_isSubmitting,
+                          onStatusChanged: (status) {
+                            record.attendanceStatus = status;
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(top: BorderSide(color: Color(0xFFE4E7EC))),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _submitAttendance,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4A40CF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Submit Attendance'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
+  }
+
+  void _syncAttendanceRecords(
+    List<StudentFeatureModel> students,
+    Map<String, TeacherStudentExclusion> exclusionsByStudentDocId,
+  ) {
+    final statusByStudentId = <String, bool?>{
+      for (final record in _attendanceRecords)
+        record.student.id: record.attendanceStatus,
+    };
+
+    _attendanceRecords
+      ..clear()
+      ..addAll(
+        students.map((student) {
+          final exclusion = exclusionsByStudentDocId[student.id];
+          return _StudentAttendanceRecord(
+            student: student,
+            attendanceStatus: statusByStudentId[student.id],
+            isExcluded: exclusion != null,
+            exclusionStatus: exclusion?.status,
+            exclusionTotalAbsences: exclusion?.totalAbsences,
+          );
+        }),
+      );
   }
 
   Widget _buildHistoryTab() {
@@ -588,7 +539,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
@@ -600,9 +551,22 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
     );
   }
 
-  Future<void> _submitAttendance(List<StudentFeatureModel> students) async {
-    final hasUnmarkedStudent = students.any(
-      (student) => _isPresentByStudentId[student.id] == null,
+  Future<void> _submitAttendance() async {
+    final activeRecords = _attendanceRecords
+        .where((record) => !record.isExcluded)
+        .toList();
+
+    if (activeRecords.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All students in this subject are currently excluded.'),
+        ),
+      );
+      return;
+    }
+
+    final hasUnmarkedStudent = activeRecords.any(
+      (record) => record.attendanceStatus == null,
     );
 
     if (hasUnmarkedStudent) {
@@ -617,8 +581,8 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
     setState(() => _isSubmitting = true);
     try {
       final payload = <String, bool>{
-        for (final student in students)
-          student.id: _isPresentByStudentId[student.id]!,
+        for (final record in activeRecords)
+          record.student.id: record.attendanceStatus!,
       };
 
       await _service.submitGroupAttendance(
@@ -646,5 +610,207 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
         setState(() => _isSubmitting = false);
       }
     }
+  }
+}
+
+class _StudentAttendanceRecord {
+  _StudentAttendanceRecord({
+    required this.student,
+    required this.attendanceStatus,
+    required this.isExcluded,
+    this.exclusionStatus,
+    this.exclusionTotalAbsences,
+  });
+
+  final StudentFeatureModel student;
+  bool? attendanceStatus;
+  final bool isExcluded;
+  final String? exclusionStatus;
+  final int? exclusionTotalAbsences;
+}
+
+class _StudentAttendanceItem extends StatefulWidget {
+  const _StudentAttendanceItem({
+    super.key,
+    required this.student,
+    required this.initialAttendanceStatus,
+    required this.isExcluded,
+    required this.exclusionStatus,
+    required this.totalAbsences,
+    required this.enabled,
+    required this.onStatusChanged,
+  });
+
+  final StudentFeatureModel student;
+  final bool? initialAttendanceStatus;
+  final bool isExcluded;
+  final String? exclusionStatus;
+  final int? totalAbsences;
+  final bool enabled;
+  final ValueChanged<bool?> onStatusChanged;
+
+  @override
+  State<_StudentAttendanceItem> createState() => _StudentAttendanceItemState();
+}
+
+class _StudentAttendanceItemState extends State<_StudentAttendanceItem> {
+  bool? _attendanceStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _attendanceStatus = widget.initialAttendanceStatus;
+  }
+
+  @override
+  void didUpdateWidget(covariant _StudentAttendanceItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.student.id != widget.student.id ||
+        oldWidget.initialAttendanceStatus != widget.initialAttendanceStatus) {
+      _attendanceStatus = widget.initialAttendanceStatus;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isPresent = _attendanceStatus == true;
+    final isAbsent = _attendanceStatus == false;
+    final effectiveEnabled = widget.enabled && !widget.isExcluded;
+    final exclusionStatus = (widget.exclusionStatus ?? 'pending').toUpperCase();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: widget.isExcluded ? const Color(0xFFF5F6F8) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE4E7EC)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color(0xFFE8ECFF),
+            child: Text(
+              widget.student.fullName.isEmpty
+                  ? '?'
+                  : widget.student.fullName[0].toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFF4B5563),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.student.fullName,
+                  style: TextStyle(
+                    color: widget.isExcluded
+                        ? const Color(0xFF6B7280)
+                        : const Color(0xFF101828),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  widget.student.email,
+                  style: TextStyle(
+                    color: widget.isExcluded
+                        ? const Color(0xFF9CA3AF)
+                        : const Color(0xFF667085),
+                    fontSize: 12,
+                  ),
+                ),
+                if (widget.isExcluded) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'Excluded ($exclusionStatus) • ${widget.totalAbsences ?? 0} absences',
+                      style: const TextStyle(
+                        color: Color(0xFF374151),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ChoiceChip(
+            selected: isPresent,
+            showCheckmark: false,
+            selectedColor: const Color(0xFFE7F8EF),
+            backgroundColor: const Color(0xFFF2F4F7),
+            side: BorderSide.none,
+            label: Text(
+              'Present',
+              style: TextStyle(
+                color: isPresent
+                    ? const Color(0xFF067647)
+                    : const Color(0xFF667085),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            onSelected: effectiveEnabled
+                ? (_) {
+                    setState(() {
+                      _attendanceStatus = true;
+                    });
+                    widget.onStatusChanged(true);
+                  }
+                : null,
+          ),
+          const SizedBox(width: 6),
+          ChoiceChip(
+            selected: isAbsent,
+            showCheckmark: false,
+            selectedColor: const Color(0xFFFEE4E2),
+            backgroundColor: const Color(0xFFF2F4F7),
+            side: BorderSide.none,
+            label: Text(
+              'Absent',
+              style: TextStyle(
+                color: isAbsent
+                    ? const Color(0xFFB42318)
+                    : const Color(0xFF667085),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            onSelected: effectiveEnabled
+                ? (_) {
+                    setState(() {
+                      _attendanceStatus = false;
+                    });
+                    widget.onStatusChanged(false);
+                  }
+                : null,
+          ),
+          if (_attendanceStatus == null) ...[
+            const SizedBox(width: 6),
+            Text(
+              widget.isExcluded ? 'Disabled' : 'Unmarked',
+              style: const TextStyle(
+                color: Color(0xFF667085),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

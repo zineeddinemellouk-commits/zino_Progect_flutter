@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/models/absence_model.dart';
 import 'package:test/models/class_model.dart';
+import 'package:test/models/exclusion_model.dart';
 import 'package:test/models/group_model.dart';
 import 'package:test/models/justification_model.dart';
 import 'package:test/models/level_model.dart';
@@ -42,6 +43,8 @@ class FirestoreService {
       _firestore.collection('justifications');
   CollectionReference<Map<String, dynamic>> get _absences =>
       _firestore.collection('absences');
+  CollectionReference<Map<String, dynamic>> get _exclusions =>
+      _firestore.collection('exclusions');
 
   /// Aggregated attendance data for department dashboards.
   ///
@@ -67,7 +70,9 @@ class FirestoreService {
       );
 
       final averageAttendancePoints = totalAttendancePoints / docs.length;
-      final normalizedAverage = _normalizeAttendanceRate(averageAttendancePoints);
+      final normalizedAverage = _normalizeAttendanceRate(
+        averageAttendancePoints,
+      );
 
       return AttendanceOverviewStats(
         totalStudents: docs.length,
@@ -442,10 +447,99 @@ class FirestoreService {
     required String id,
     required String status,
     String? refusalReason,
-  }) {
-    return _justifications.doc(id).update({
-      'status': status,
+  }) async {
+    final normalizedStatus = status.trim().toLowerCase();
+    final justificationRef = _justifications.doc(id);
+
+    final justificationSnap = await justificationRef.get();
+    final justificationData =
+        justificationSnap.data() ?? const <String, dynamic>{};
+    final absenceId = (justificationData['absenceId'] as String?)?.trim() ?? '';
+    final studentId = (justificationData['studentId'] as String?)?.trim() ?? '';
+
+    final batch = _firestore.batch();
+
+    batch.update(justificationRef, {
+      'status': normalizedStatus,
       'refusalReason': refusalReason,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    if (absenceId.isNotEmpty) {
+      final absenceRef = _absences.doc(absenceId);
+      final isAccepted = normalizedStatus == 'accepted';
+      final mappedAbsenceStatus = isAccepted ? 'justified' : 'rejected';
+
+      batch.update(absenceRef, {
+        'status': mappedAbsenceStatus,
+        'isJustified': isAccepted,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    if (studentId.isNotEmpty) {
+      final studentRef = _students.doc(studentId);
+      final studentSnap = await studentRef.get();
+      if (studentSnap.exists) {
+        final studentData = studentSnap.data() ?? const <String, dynamic>{};
+        final pending = (studentData['pendingAbsence'] as num?)?.toInt() ?? 0;
+        final justified =
+            (studentData['justifiedAbsence'] as num?)?.toInt() ?? 0;
+
+        if (normalizedStatus == 'accepted') {
+          batch.update(studentRef, {
+            'pendingAbsence': pending > 0 ? pending - 1 : 0,
+            'justifiedAbsence': justified + 1,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else if (normalizedStatus == 'refused' ||
+            normalizedStatus == 'rejected') {
+          batch.update(studentRef, {
+            'pendingAbsence': pending > 0 ? pending - 1 : 0,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    }
+
+    await batch.commit();
+  }
+
+  Stream<List<ExclusionModel>> watchPendingExclusions() {
+    return _exclusions.where('status', isEqualTo: 'pending').snapshots().map((
+      snapshot,
+    ) {
+      final exclusions = snapshot.docs
+          .map((doc) => ExclusionModel.fromMap(doc.id, doc.data()))
+          .toList();
+
+      exclusions.sort((a, b) {
+        final levelCompare = a.levelName.toLowerCase().compareTo(
+          b.levelName.toLowerCase(),
+        );
+        if (levelCompare != 0) return levelCompare;
+
+        final groupCompare = a.groupName.toLowerCase().compareTo(
+          b.groupName.toLowerCase(),
+        );
+        if (groupCompare != 0) return groupCompare;
+
+        return a.studentName.toLowerCase().compareTo(
+          b.studentName.toLowerCase(),
+        );
+      });
+
+      return exclusions;
+    });
+  }
+
+  Future<void> updateExclusionStatus({
+    required String id,
+    required String status,
+  }) {
+    final normalizedStatus = status.trim().toLowerCase();
+    return _exclusions.doc(id).update({
+      'status': normalizedStatus,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

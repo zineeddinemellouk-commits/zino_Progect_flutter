@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/helpers/localization_helper.dart';
 import 'package:test/pages/departement/AddSubject.dart';
+import 'package:test/pages/departement/ViewExclude.dart';
 import 'package:test/pages/departement/AddTeacher.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
@@ -117,7 +118,8 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
           StreamBuilder(
             stream: provider.watchAttendanceOverview(),
             builder: (context, overviewSnapshot) {
-              final overview = overviewSnapshot.data ??
+              final overview =
+                  overviewSnapshot.data ??
                   const AttendanceOverviewStats(
                     totalStudents: 0,
                     averageAttendanceRate: 0,
@@ -152,7 +154,8 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     return StreamBuilder<AttendanceOverviewStats>(
       stream: provider.watchAttendanceOverview(),
       builder: (context, overviewSnapshot) {
-        final overview = overviewSnapshot.data ??
+        final overview =
+            overviewSnapshot.data ??
             const AttendanceOverviewStats(
               totalStudents: 0,
               averageAttendanceRate: 0,
@@ -200,7 +203,8 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     return StreamBuilder<AttendanceOverviewStats>(
       stream: provider.watchAttendanceOverview(),
       builder: (context, snapshot) {
-        final overview = snapshot.data ??
+        final overview =
+            snapshot.data ??
             const AttendanceOverviewStats(
               totalStudents: 0,
               averageAttendanceRate: 0,
@@ -241,7 +245,9 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               Text(
                 'Overall Attendance Rate',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -294,7 +300,9 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
               Text(
                 'Average of all student attendance values stored in Firestore',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.5),
                   fontSize: 11,
                   fontStyle: FontStyle.italic,
                 ),
@@ -366,6 +374,27 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                 ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                context,
+                icon: Icons.gpp_maybe_outlined,
+                color: const Color(0xFFB54708),
+                label: 'View Exclude',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ViewExclude()),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: SizedBox.shrink()),
+            const SizedBox(width: 12),
+            const Expanded(child: SizedBox.shrink()),
           ],
         ),
       ],

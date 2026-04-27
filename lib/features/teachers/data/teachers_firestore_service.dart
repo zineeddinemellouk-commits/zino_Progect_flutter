@@ -99,6 +99,26 @@ class TeacherAttendanceHistoryItem {
   }
 }
 
+class TeacherStudentExclusion {
+  const TeacherStudentExclusion({
+    required this.exclusionId,
+    required this.studentId,
+    required this.studentDocId,
+    required this.totalAbsences,
+    required this.justifiedAbsences,
+    required this.unjustifiedAbsences,
+    required this.status,
+  });
+
+  final String exclusionId;
+  final String studentId;
+  final String studentDocId;
+  final int totalAbsences;
+  final int justifiedAbsences;
+  final int unjustifiedAbsences;
+  final String status;
+}
+
 class TeachersFirestoreService {
   TeachersFirestoreService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -125,6 +145,12 @@ class TeachersFirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _attendanceHistory =>
       _firestore.collection('attendance_history');
+
+  CollectionReference<Map<String, dynamic>> get _attendance =>
+      _firestore.collection('attendance');
+
+  CollectionReference<Map<String, dynamic>> get _exclusions =>
+      _firestore.collection('exclusions');
 
   CollectionReference<Map<String, dynamic>> get _notifications =>
       _firestore.collection('notifications');
@@ -327,6 +353,49 @@ class TeachersFirestoreService {
         });
   }
 
+  Stream<Map<String, TeacherStudentExclusion>> watchTeacherSubjectExclusions({
+    required String teacherId,
+    required String subjectId,
+  }) {
+    final normalizedTeacherId = teacherId.trim();
+    final normalizedSubjectId = subjectId.trim();
+
+    if (normalizedTeacherId.isEmpty || normalizedSubjectId.isEmpty) {
+      return Stream.value(const <String, TeacherStudentExclusion>{});
+    }
+
+    return _exclusions
+        .where('teacherId', isEqualTo: normalizedTeacherId)
+        .where('subjectId', isEqualTo: normalizedSubjectId)
+        .where('status', whereIn: const ['pending', 'approved'])
+        .snapshots()
+        .map((snapshot) {
+          final map = <String, TeacherStudentExclusion>{};
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            final studentDocId =
+                (data['studentDocId'] as String?)?.trim() ?? '';
+            if (studentDocId.isEmpty) continue;
+
+            final item = TeacherStudentExclusion(
+              exclusionId: doc.id,
+              studentId: (data['studentId'] as String?)?.trim() ?? '',
+              studentDocId: studentDocId,
+              totalAbsences: (data['totalAbsences'] as num?)?.toInt() ?? 0,
+              justifiedAbsences:
+                  (data['justifiedAbsences'] as num?)?.toInt() ?? 0,
+              unjustifiedAbsences:
+                  (data['unjustifiedAbsences'] as num?)?.toInt() ?? 0,
+              status:
+                  (data['status'] as String?)?.trim().toLowerCase() ??
+                  'pending',
+            );
+            map[studentDocId] = item;
+          }
+          return map;
+        });
+  }
+
   Future<void> submitGroupAttendance({
     required String teacherId,
     required TeacherGroupOverview group,
@@ -398,10 +467,10 @@ class TeachersFirestoreService {
     for (final doc in studentDocs) {
       final studentDocId = doc.id;
       final data = doc.data();
-      
+
       // ✅ FIX: Use authUid from student document (Firebase Auth UID), not document ID
       final authUid = (data['authUid'] as String?) ?? studentDocId;
-      
+
       final present = isPresentByStudentId[studentDocId] ?? true;
 
       final totalPresence = (data['totalPresence'] as num?)?.toInt() ?? 0;
@@ -421,6 +490,21 @@ class TeachersFirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      final attendanceRef = _attendance.doc();
+      batch.set(attendanceRef, {
+        'id': attendanceRef.id,
+        'studentId': authUid,
+        'studentDocId': studentDocId,
+        'studentName': (data['fullName'] as String?)?.trim() ?? 'Unknown',
+        'teacherId': normalizedTeacherId,
+        'teacherName': teacherName,
+        'subjectId': resolvedSubjectId,
+        'subjectName': resolvedSubjectName,
+        'status': present ? 'present' : 'absent',
+        'isJustified': present,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
       if (present) {
         presentStudentIds.add(studentDocId);
       } else {
@@ -428,7 +512,10 @@ class TeachersFirestoreService {
         final absenceRef = _absences.doc();
         absenceIdByStudentId[studentDocId] = absenceRef.id;
         batch.set(absenceRef, {
-          'studentId': authUid,  // ✅ FIX: Use authUid (Firebase Auth UID) instead of document ID
+          'studentId':
+              authUid, // ✅ FIX: Use authUid (Firebase Auth UID) instead of document ID
+          'studentDocId': studentDocId,
+          'studentName': (data['fullName'] as String?)?.trim() ?? 'Unknown',
           'teacherId': normalizedTeacherId,
           'teacherName': teacherName,
           'subjectId': resolvedSubjectId,
@@ -438,11 +525,63 @@ class TeachersFirestoreService {
           'createdAt': Timestamp.fromDate(now),
           'deadlineAt': Timestamp.fromDate(deadlineAt),
           'status': 'pending',
+          'isJustified': false,
           'courseCode': resolvedSubjectId.isEmpty
               ? group.groupId
               : resolvedSubjectId,
           'courseName': resolvedSubjectName,
         });
+
+        final counts = await _countSubjectAbsenceScope(
+          studentId: authUid,
+          teacherId: normalizedTeacherId,
+          subjectId: resolvedSubjectId,
+        );
+        final nextTotalAbsences = counts.total + 1;
+        final nextJustifiedAbsences = counts.justified;
+        final nextUnjustifiedAbsences = counts.unjustified + 1;
+
+        if (nextTotalAbsences >= 5) {
+          final exclusionDocId = _buildExclusionDocId(
+            studentId: authUid,
+            teacherId: normalizedTeacherId,
+            subjectId: resolvedSubjectId,
+          );
+
+          final exclusionRef = _exclusions.doc(exclusionDocId);
+          final exclusionSnap = await exclusionRef.get();
+          final existingStatus =
+              (exclusionSnap.data()?['status'] as String?)
+                  ?.trim()
+                  .toLowerCase() ??
+              'pending';
+
+          if (existingStatus != 'approved') {
+            batch.set(exclusionRef, {
+              'id': exclusionDocId,
+              'studentId': authUid,
+              'studentDocId': studentDocId,
+              'studentName':
+                  (data['fullName'] as String?)?.trim() ?? 'Unknown Student',
+              'teacherId': normalizedTeacherId,
+              'teacherName': teacherName,
+              'subjectId': resolvedSubjectId,
+              'subjectName': resolvedSubjectName,
+              'groupId': group.groupId,
+              'groupName': group.groupName,
+              'levelId': group.levelId,
+              'levelName': group.levelName,
+              'totalAbsences': nextTotalAbsences,
+              'justifiedAbsences': nextJustifiedAbsences,
+              'unjustifiedAbsences': nextUnjustifiedAbsences,
+              'status': 'pending',
+              'createdAt':
+                  exclusionSnap.data()?['createdAt'] ??
+                  FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
       }
     }
 
@@ -470,12 +609,16 @@ class TeachersFirestoreService {
     await batch.commit();
 
     // Create notifications for absent students with relatedAbsenceId link
-    print('[TeachersFirestoreService] Creating ${absentStudentIds.length} notifications for absent students');
+    print(
+      '[TeachersFirestoreService] Creating ${absentStudentIds.length} notifications for absent students',
+    );
     for (final studentId in absentStudentIds) {
       try {
         final absenceId = absenceIdByStudentId[studentId];
-        print('[TeachersFirestoreService] Creating notification for student=$studentId, absenceId=$absenceId, subject=$resolvedSubjectName');
-        
+        print(
+          '[TeachersFirestoreService] Creating notification for student=$studentId, absenceId=$absenceId, subject=$resolvedSubjectName',
+        );
+
         await _notifications.doc().set({
           'studentId': studentId,
           'type': 'absencerecorded',
@@ -484,14 +627,70 @@ class TeachersFirestoreService {
               'You were marked absent in $resolvedSubjectName by $teacherName',
           'createdAt': FieldValue.serverTimestamp(),
           'isRead': false,
-          if (absenceId != null) 'relatedAbsenceId': absenceId,
+          ...(absenceId == null
+              ? const <String, dynamic>{}
+              : <String, dynamic>{'relatedAbsenceId': absenceId}),
         });
       } catch (e) {
         // Continue with other notifications even if one fails
-        print('[TeachersFirestoreService] Failed to create notification for student=$studentId: $e');
+        print(
+          '[TeachersFirestoreService] Failed to create notification for student=$studentId: $e',
+        );
       }
     }
-    print('[TeachersFirestoreService] Attendance submitted: ${presentStudentIds.length} present, ${absentStudentIds.length} absent');
+    print(
+      '[TeachersFirestoreService] Attendance submitted: ${presentStudentIds.length} present, ${absentStudentIds.length} absent',
+    );
+  }
+
+  Future<_AbsenceScopeCounts> _countSubjectAbsenceScope({
+    required String studentId,
+    required String teacherId,
+    required String subjectId,
+  }) async {
+    final normalizedStudentId = studentId.trim();
+    final normalizedTeacherId = teacherId.trim();
+    final normalizedSubjectId = subjectId.trim();
+
+    if (normalizedStudentId.isEmpty ||
+        normalizedTeacherId.isEmpty ||
+        normalizedSubjectId.isEmpty) {
+      return const _AbsenceScopeCounts(total: 0, justified: 0, unjustified: 0);
+    }
+
+    final snapshot = await _absences
+        .where('studentId', isEqualTo: normalizedStudentId)
+        .where('teacherId', isEqualTo: normalizedTeacherId)
+        .where('subjectId', isEqualTo: normalizedSubjectId)
+        .get();
+
+    var justified = 0;
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final isJustified = (data['isJustified'] as bool?) ?? false;
+      final status = (data['status'] as String?)?.trim().toLowerCase() ?? '';
+      if (isJustified ||
+          status == 'justified' ||
+          status == 'accepted' ||
+          status == 'approved') {
+        justified++;
+      }
+    }
+
+    final total = snapshot.docs.length;
+    return _AbsenceScopeCounts(
+      total: total,
+      justified: justified,
+      unjustified: total - justified,
+    );
+  }
+
+  String _buildExclusionDocId({
+    required String studentId,
+    required String teacherId,
+    required String subjectId,
+  }) {
+    return '${studentId.trim()}__${teacherId.trim()}__${subjectId.trim()}';
   }
 
   Future<List<SubjectModel>> _fetchSubjectsForTeacher(
@@ -714,4 +913,16 @@ class _TeacherDocData {
 
   final String id;
   final Map<String, dynamic> data;
+}
+
+class _AbsenceScopeCounts {
+  const _AbsenceScopeCounts({
+    required this.total,
+    required this.justified,
+    required this.unjustified,
+  });
+
+  final int total;
+  final int justified;
+  final int unjustified;
 }

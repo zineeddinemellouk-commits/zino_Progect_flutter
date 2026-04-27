@@ -6,6 +6,7 @@ import 'AddStudent.dart';
 import 'AddTeacher.dart';
 import 'AddSubject.dart';
 import 'VewJustification.dart';
+import 'ViewExclude.dart';
 import 'ViewStudent.dart';
 import 'ViewTeachers.dart';
 import 'ViewSubjects.dart';
@@ -258,6 +259,19 @@ Drawer departmentDrawer(BuildContext context) {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ViewSubjects()),
+              );
+            },
+          ),
+          _drawerIconItem(
+            context,
+            Icons.gpp_maybe_outlined,
+            'View Exclude',
+            const Color(0xFFB54708),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ViewExclude()),
               );
             },
           ),

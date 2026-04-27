@@ -86,16 +86,16 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
             .snapshots(),
         builder: (context, snapshot) {
           print('═══════════════════════════════════════════════════════');
-          print('[AbsenceTrackerPage] Stream state: ${snapshot.connectionState}');
+          print(
+            '[AbsenceTrackerPage] Stream state: ${snapshot.connectionState}',
+          );
           print('[AbsenceTrackerPage] Current studentId: $studentId');
           print('[AbsenceTrackerPage] Has error: ${snapshot.hasError}');
           print('[AbsenceTrackerPage] Has data: ${snapshot.hasData}');
 
           if (snapshot.connectionState == ConnectionState.waiting) {
             print('[AbsenceTrackerPage] ⏳ WAITING for data...');
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -106,7 +106,11 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 48,
+                    ),
                     const SizedBox(height: 16),
                     const Text('Error loading absences'),
                     const SizedBox(height: 8),
@@ -121,14 +125,22 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
           print('[AbsenceTrackerPage] ✅ Fetched ${docs.length} documents');
 
           if (docs.isEmpty) {
-            print('[AbsenceTrackerPage] ⚠️  No documents found for studentId: $studentId');
-            print('[AbsenceTrackerPage] Attempting to fetch ALL absences to debug...');
-            
+            print(
+              '[AbsenceTrackerPage] ⚠️  No documents found for studentId: $studentId',
+            );
+            print(
+              '[AbsenceTrackerPage] Attempting to fetch ALL absences to debug...',
+            );
+
             // Debug: Try to fetch all absences without filter
             _firestore.collection('absences').get().then((snapshot) {
-              print('[AbsenceTrackerPage] DEBUG: Total absences in collection: ${snapshot.docs.length}');
+              print(
+                '[AbsenceTrackerPage] DEBUG: Total absences in collection: ${snapshot.docs.length}',
+              );
               for (var doc in snapshot.docs) {
-                print('[AbsenceTrackerPage]   - Doc: ${doc.id}, studentId: ${doc.data()['studentId']}, status: ${doc.data()['status']}');
+                print(
+                  '[AbsenceTrackerPage]   - Doc: ${doc.id}, studentId: ${doc.data()['studentId']}, status: ${doc.data()['status']}',
+                );
               }
             });
           }
@@ -141,7 +153,9 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
               final data = doc.data();
               print('[AbsenceTrackerPage]   - Data: $data');
               final absence = AbsenceFeatureModel.fromMap(doc.id, data);
-              print('[AbsenceTrackerPage]   ✅ Parsed: ${absence.subjectName} (${absence.status})');
+              print(
+                '[AbsenceTrackerPage]   ✅ Parsed: ${absence.subjectName} (${absence.status})',
+              );
               absences.add(absence);
             } catch (e) {
               print('[AbsenceTrackerPage]   ❌ ERROR parsing doc: $e');
@@ -152,7 +166,9 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
           // Sort locally by createdAt (most recent first)
           absences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-          print('[AbsenceTrackerPage] 📊 Parsed and sorted ${absences.length} absences successfully');
+          print(
+            '[AbsenceTrackerPage] 📊 Parsed and sorted ${absences.length} absences successfully',
+          );
 
           // Calculate statistics
           final totalAbsences = absences.length;
@@ -163,7 +179,9 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
               .where((a) => a.status == AbsenceStatus.pending)
               .length;
 
-          print('[AbsenceTrackerPage] 📈 Stats - Total: $totalAbsences, Justified: $justifiedAbsences, Pending: $pendingAbsences');
+          print(
+            '[AbsenceTrackerPage] 📈 Stats - Total: $totalAbsences, Justified: $justifiedAbsences, Pending: $pendingAbsences',
+          );
           print('═══════════════════════════════════════════════════════');
 
           if (absences.isEmpty) {
@@ -173,11 +191,9 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _SummaryCard(
-                      total: 0,
-                      justified: 0,
-                      pending: 0,
-                    ),
+                    _buildExclusionNotice(studentId),
+                    const SizedBox(height: 12),
+                    _SummaryCard(total: 0, justified: 0, pending: 0),
                     const SizedBox(height: 26),
                     const Text(
                       'Recent Absences',
@@ -207,16 +223,34 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text('Student ID: $studentId', style: const TextStyle(fontSize: 12)),
-                          Text('Documents fetched: ${docs.length}', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            'Student ID: $studentId',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            'Documents fetched: ${docs.length}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           const SizedBox(height: 8),
                           const Text(
                             'Possible reasons:',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
                           ),
-                          const Text('1. No absences created for this student yet', style: TextStyle(fontSize: 11)),
-                          const Text('2. Student ID mismatch in Firestore', style: TextStyle(fontSize: 11)),
-                          const Text('3. Check Firestore console for data', style: TextStyle(fontSize: 11)),
+                          const Text(
+                            '1. No absences created for this student yet',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                          const Text(
+                            '2. Student ID mismatch in Firestore',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                          const Text(
+                            '3. Check Firestore console for data',
+                            style: TextStyle(fontSize: 11),
+                          ),
                         ],
                       ),
                     ),
@@ -232,6 +266,8 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildExclusionNotice(studentId),
+                  const SizedBox(height: 12),
                   _SummaryCard(
                     total: totalAbsences,
                     justified: justifiedAbsences,
@@ -273,10 +309,7 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                   ),
                   const SizedBox(height: 16),
                   ...absences.map((absence) {
-                    return _AbsenceCard(
-                      absence: absence,
-                      service: _service,
-                    );
+                    return _AbsenceCard(absence: absence, service: _service);
                   }),
                 ],
               ),
@@ -291,14 +324,56 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
           children: [
             Text(
               'Absence Tracker v1.0',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildExclusionNotice(String studentId) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _firestore
+          .collection('exclusions')
+          .where('studentId', isEqualTo: studentId)
+          .where('status', whereIn: const ['pending', 'approved'])
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final data = snapshot.data!.docs.first.data();
+        final subjectName =
+            (data['subjectName'] as String?)?.trim() ?? 'this subject';
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4E5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFF59E0B)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFB54708)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'You are excluded from $subjectName due to excessive absences',
+                  style: const TextStyle(
+                    color: Color(0xFFB54708),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -431,10 +506,7 @@ class _SummaryBadge extends StatelessWidget {
 
 /// Individual Absence Card
 class _AbsenceCard extends StatefulWidget {
-  const _AbsenceCard({
-    required this.absence,
-    required this.service,
-  });
+  const _AbsenceCard({required this.absence, required this.service});
 
   final AbsenceFeatureModel absence;
   final StudentsFirestoreService service;
@@ -491,7 +563,7 @@ class _AbsenceCardState extends State<_AbsenceCard>
           .where('absenceId', isEqualTo: widget.absence.id)
           .limit(1)
           .get();
-      
+
       if (query.docs.isEmpty) return null;
       return query.docs.first.data()['status'] as String?;
     } catch (e) {
@@ -538,12 +610,7 @@ class _AbsenceCardState extends State<_AbsenceCard>
       decoration: BoxDecoration(
         color: tint,
         borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(
-            color: _borderColor,
-            width: 3.5,
-          ),
-        ),
+        border: Border(left: BorderSide(color: _borderColor, width: 3.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,7 +692,7 @@ class _AbsenceCardState extends State<_AbsenceCard>
             builder: (context, snapshot) {
               String displayLabel = _statusLabel;
               Color statusColor = _statusColor;
-              
+
               // If justified, show the actual justification status
               if (_isJustified && snapshot.hasData && snapshot.data != null) {
                 final justStatus = snapshot.data!.toLowerCase();
@@ -640,9 +707,12 @@ class _AbsenceCardState extends State<_AbsenceCard>
                   statusColor = const Color(0xFFF59E0B);
                 }
               }
-              
+
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(20),
@@ -664,7 +734,9 @@ class _AbsenceCardState extends State<_AbsenceCard>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              color: _isExpired ? const Color(0xFFF9FAFB) : const Color(0xFFF0F4FF),
+              color: _isExpired
+                  ? const Color(0xFFF9FAFB)
+                  : const Color(0xFFF0F4FF),
               borderRadius: BorderRadius.circular(10),
               border: _isExpired
                   ? Border.all(color: const Color(0xFFE4E7EC))
@@ -701,13 +773,13 @@ class _AbsenceCardState extends State<_AbsenceCard>
                   _isExpired
                       ? Icons.block_outlined
                       : _isUrgent
-                          ? Icons.timer_outlined
-                          : Icons.schedule,
+                      ? Icons.timer_outlined
+                      : Icons.schedule,
                   color: _isExpired
                       ? const Color(0xFF98A2B3)
                       : _isUrgent
-                          ? const Color(0xFFD92D20)
-                          : const Color(0xFF5E64FF),
+                      ? const Color(0xFFD92D20)
+                      : const Color(0xFF5E64FF),
                   size: 28,
                 ),
               ],
@@ -745,10 +817,7 @@ class _AbsenceCardState extends State<_AbsenceCard>
                 ),
                 child: const Text(
                   'Justify Now',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                 ),
               ),
             ),
@@ -761,9 +830,7 @@ class _AbsenceCardState extends State<_AbsenceCard>
   Future<void> _handleJustify(BuildContext context) async {
     if (_isExpired || _isJustified) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You cannot justify this absence.'),
-        ),
+        const SnackBar(content: Text('You cannot justify this absence.')),
       );
       return;
     }
@@ -778,20 +845,32 @@ class _AbsenceCardState extends State<_AbsenceCard>
     // Refresh the page if justification was submitted
     if (result == true && mounted) {
       // The StreamBuilder will automatically update when Firestore data changes
-      print('[AbsenceCard] Justification submitted, page will refresh automatically');
+      print(
+        '[AbsenceCard] Justification submitted, page will refresh automatically',
+      );
     }
   }
 
   String _formatDateTime(DateTime date) {
     final months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final minute = date.minute.toString().padLeft(2, '0');
     final suffix = date.hour >= 12 ? 'PM' : 'AM';
     return '${months[date.month - 1]} ${date.day}, ${date.year} • $hour:$minute $suffix';
   }
 }
-
-

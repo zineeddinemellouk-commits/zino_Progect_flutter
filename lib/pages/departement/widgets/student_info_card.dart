@@ -113,8 +113,6 @@ class StudentInfoCard extends StatelessWidget {
           Row(
             children: [
               _chip('$groupName', const Color(0xFF2563EB)),
-              const SizedBox(width: 8),
-              _attendanceChip('${student.attendancePercentage}%'),
             ],
           ),
         ],
@@ -123,35 +121,6 @@ class StudentInfoCard extends StatelessWidget {
   }
 
   Widget _chip(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _attendanceChip(String text) {
-    final percentage = int.tryParse(text.replaceAll('%', '')) ?? 0;
-    Color color;
-
-    if (percentage >= 75) {
-      color = Colors.green;
-    } else if (percentage >= 0) {
-      color = Colors.orange;
-    } else {
-      color = Colors.red;
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(

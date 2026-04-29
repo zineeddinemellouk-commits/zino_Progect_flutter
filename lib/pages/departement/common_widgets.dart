@@ -10,6 +10,7 @@ import 'ViewExclude.dart';
 import 'ViewStudent.dart';
 import 'ViewTeachers.dart';
 import 'ViewSubjects.dart';
+import 'create_admin_page.dart';
 // ✅ removed: import 'package:test/pages/login_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
@@ -272,6 +273,22 @@ Drawer departmentDrawer(BuildContext context) {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ViewExclude()),
+              );
+            },
+          ),
+
+          // ── Admin Section ────────────────────────────────────────────
+          _sectionLabel(context, 'Administration'),
+          _drawerIconItem(
+            context,
+            Icons.admin_panel_settings_outlined,
+            'Create Admin',
+            const Color(0xFF6366F1),
+            () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CreateAdminPage()),
               );
             },
           ),

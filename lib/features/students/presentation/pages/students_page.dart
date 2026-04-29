@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/students/presentation/pages/absence_tracker_page.dart';
@@ -644,8 +645,11 @@ class _StudentsPageState extends State<StudentsPage> {
               label: 'PROFILE',
               active: _selectedNavIndex == 3,
               onTap: () {
+                final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const StudentProfilePage()),
+                  MaterialPageRoute(
+                    builder: (_) => StudentProfilePage(studentEmail: currentUserEmail),
+                  ),
                 );
               },
             ),

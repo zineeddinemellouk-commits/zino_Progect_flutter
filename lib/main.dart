@@ -109,7 +109,6 @@ class MyApp extends StatelessWidget {
           home: const _StartupGate(),
           routes: {
             '/login': (_) => const HodooriLoginScreen(),
-            '/': (_) => const _StartupGate(),
             ViewStudent.routeName: (_) => const ViewStudent(),
             DepartmentSettingsPage.routeName: (_) =>
                 const DepartmentSettingsPage(),
@@ -619,11 +618,16 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
             child: Opacity(opacity: value, child: child),
           ),
           child: SizedBox(
-            width: 200,
-            height: 200,
+            width: 150,
+            height: 150,
             child: Image.asset(
               'assets/l10n/images/logo_hodori.png',
+               width: double.infinity,
+               height: double.infinity,
+
               fit: BoxFit.contain,
+              
+              
             ),
           ),
         ),
@@ -639,7 +643,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
             ),
           ),
           child: const Text(
-            'Hodoori',
+            'HODORI',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,
@@ -652,7 +656,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
         const Text(
           'Smart University Attendance',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 17,
             fontWeight: FontWeight.w500,
             color: Color(0xFF6B7280),
           ),

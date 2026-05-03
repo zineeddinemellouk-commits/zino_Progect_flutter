@@ -104,6 +104,8 @@ flutter:
 
 # Configuration for flutter_launcher_icons
 flutter_icons:
-  android: true
-  ios: false
-  image_path: "assets/l10n/images/logo_hodori.png"
+   android: true
+   ios: true
+   image_path: "assets/l10n/images/logo_hodori.png"
+   adaptive_icon_background: "#ffffff"
+   adaptive_icon_foreground: "assets/l10n/images/logo_hodori.png"

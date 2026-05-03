@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/helpers/localization_helper.dart';
 import 'package:test/main.dart';
+import 'package:test/services/department_auth_service.dart';
 
 class DepartmentSettingsPage extends StatefulWidget {
   const DepartmentSettingsPage({super.key});
@@ -314,7 +315,7 @@ class _DepartmentSettingsPageState extends State<DepartmentSettingsPage> {
 
   Future<void> _logout() async {
     try {
-      await _auth.signOut();
+      await DepartmentAuthService().signOut();
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     } catch (e) {

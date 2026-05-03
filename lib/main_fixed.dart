@@ -11,10 +11,6 @@ import 'package:test/pages/departement/students_screen.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_profile_page.dart';
 import 'package:test/features/students/presentation/pages/students_page.dart';
 
-import 'package:test/models/app_user_profile.dart';
-import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
-import 'package:test/pages/role_home_page.dart';
-import 'package:test/services/department_auth_service.dart';
 
 
 import 'package:test/pages/department_settings_page.dart';

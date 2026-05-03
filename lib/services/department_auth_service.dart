@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/firebase_options.dart';
 import 'package:test/models/app_user_profile.dart';
 
@@ -87,6 +88,19 @@ class DepartmentAuthService {
       ...profile.toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<AppUserProfile?> getUserProfileByUid(String uid) async {
+    final normalizedUid = uid.trim();
+    if (normalizedUid.isEmpty) return null;
+
+    final snapshot = await _profiles.doc(normalizedUid).get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    return AppUserProfile.fromMap(normalizedUid, data);
   }
 
   Future<void> createDepartmentAccount({
@@ -246,6 +260,12 @@ class DepartmentAuthService {
   }
 
   Future<void> signOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {
+      // Ignore Supabase sign-out failures so Firebase sign-out still runs.
+    }
+
     await FirebaseAuth.instance.signOut();
   }
 }

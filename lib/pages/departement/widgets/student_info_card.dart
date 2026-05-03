@@ -22,98 +22,152 @@ class StudentInfoCard extends StatelessWidget {
         : (fallbackGroupName ?? student.groupId);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: const Border(
-          left: BorderSide(color: Color(0xFF2563EB), width: 4),
-        ),
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 23,
-                backgroundColor: const Color(0xFF2563EB),
-                child: Text(
-                  student.fullName
-                      .split(' ')
-                      .where((part) => part.isNotEmpty)
-                      .take(2)
-                      .map((part) => part[0])
-                      .join(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+          // Purple accent bar
+          Container(
+            width: 4,
+            height: 110,
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(14),
+                bottomLeft: Radius.circular(14),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      student.fullName,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      student.email,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (onEdit != null)
-                IconButton(
-                  onPressed: onEdit,
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: Color(0xFF2563EB),
-                    size: 20,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              const SizedBox(width: 8),
-              if (onDelete != null)
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Color(0xFFDC2626),
-                    size: 20,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _chip('$groupName', const Color(0xFF2563EB)),
-            ],
+          // Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                        child: Center(
+                          child: Text(
+                            student.fullName.isNotEmpty
+                                ? student.fullName[0].toUpperCase()
+                                : '',
+                            style: const TextStyle(
+                              color: Color(0xFF7C3AED),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          student.fullName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.email_outlined,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          student.email,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _chip('$groupName', const Color(0xFF7C3AED)),
+                      const SizedBox(width: 8),
+                      if (student.age != null)
+                        _chip('${student.age} yrs', const Color(0xFF2563EB)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Actions
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (onEdit != null)
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: Color(0xFF7C3AED),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 6),
+                if (onDelete != null)
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

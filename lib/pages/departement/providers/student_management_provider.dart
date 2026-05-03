@@ -80,6 +80,7 @@ class StudentManagementProvider extends ChangeNotifier {
     required int attendancePercentage,
     required String groupId,
     String? levelId,
+    int? age,
   }) async {
     try {
       // Validate inputs
@@ -122,6 +123,7 @@ class StudentManagementProvider extends ChangeNotifier {
           classId: groupId,
           subjectIds: const [],
           levelId: levelId,
+          age: age,
           authUid: authUid,
         );
 
@@ -389,6 +391,7 @@ class StudentManagementProvider extends ChangeNotifier {
     required String classId,
     required List<String> subjectIds,
     String? levelId,
+    int? age,
   }) async {
     await _firestoreService.updateStudent(
       id: id,
@@ -399,6 +402,7 @@ class StudentManagementProvider extends ChangeNotifier {
       classId: classId,
       subjectIds: subjectIds,
       levelId: levelId,
+      age: age,
     );
     notifyListeners();
   }

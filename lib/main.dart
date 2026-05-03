@@ -1,4 +1,5 @@
 // ignore_for_file: deprecated_member_use
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -18,7 +19,7 @@ import 'package:test/pages/department_dashboard.dart' show DepartmentDashboard;
 import 'package:test/pages/role_home_page.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/pages/department_settings_page.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:test/providers/locale_provider.dart';
 import 'package:test/services/localization_service.dart';
 
@@ -37,6 +38,28 @@ Future<void> main() async {
   await LocalizationService.init();
 
   runApp(const MyApp());
+}
+
+Widget _destinationForProfile(AppUserProfile profile) {
+  if (profile.role == 'Department') return const DepartmentDashboard();
+  if (profile.role == 'Student') {
+    return StudentsPage(
+      selfViewOnly: true,
+      studentDocumentId: profile.linkedDocumentId,
+      studentEmail: profile.email,
+    );
+  }
+  if (profile.role == 'Teacher') {
+    return TeacherProfilePage(
+      teacherId: profile.linkedDocumentId,
+      teacherEmail: profile.email,
+    );
+  }
+  return RoleHomePage(
+    role: profile.role,
+    email: profile.email,
+    displayName: profile.displayName,
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -83,10 +106,10 @@ class MyApp extends StatelessWidget {
               child: child ?? const SizedBox(),
             );
           },
-          initialRoute: '/login',
+          home: const _StartupGate(),
           routes: {
             '/login': (_) => const HodooriLoginScreen(),
-            '/': (_) => const HodooriLoginScreen(),
+            '/': (_) => const _StartupGate(),
             ViewStudent.routeName: (_) => const ViewStudent(),
             DepartmentSettingsPage.routeName: (_) =>
                 const DepartmentSettingsPage(),
@@ -129,6 +152,119 @@ class MyApp extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _StartupGate extends StatefulWidget {
+  const _StartupGate();
+
+  @override
+  State<_StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<_StartupGate> {
+  StreamSubscription<User?>? _firebaseSubscription;
+  StreamSubscription<AuthState>? _supabaseSubscription;
+  Future<AppUserProfile?>? _profileFuture;
+  String? _currentUid;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncSession();
+    _firebaseSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      (_) => _syncSession(),
+    );
+    _supabaseSubscription = Supabase.instance.client.auth.onAuthStateChange
+        .listen((_) => _syncSession());
+  }
+
+  @override
+  void dispose() {
+    _firebaseSubscription?.cancel();
+    _supabaseSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _syncSession() {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    final uid = session?.user.id ?? firebaseUser?.uid;
+
+    if (!mounted) return;
+
+    if (uid == null || uid.trim().isEmpty) {
+      setState(() {
+        _currentUid = null;
+        _profileFuture = null;
+      });
+      return;
+    }
+
+    final normalizedUid = uid.trim();
+    if (_currentUid == normalizedUid && _profileFuture != null) {
+      return;
+    }
+
+    setState(() {
+      _currentUid = normalizedUid;
+      _profileFuture = DepartmentAuthService().getUserProfileByUid(
+        normalizedUid,
+      );
+    });
+  }
+
+  Future<AppUserProfile?> _resolveProfile() async {
+    final supabase = Supabase.instance.client;
+    final session = supabase.auth.currentSession;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+
+    final uid = session?.user.id ?? firebaseUser?.uid;
+    if (uid == null || uid.trim().isEmpty) {
+      return null;
+    }
+
+    return DepartmentAuthService().getUserProfileByUid(uid);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final supabaseSession = Supabase.instance.client.auth.currentSession;
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+
+    if (supabaseSession == null && firebaseUser == null) {
+      return const HodooriLoginScreen();
+    }
+
+    final future = _profileFuture ?? _resolveProfile();
+
+    return FutureBuilder<AppUserProfile?>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingScreen();
+        }
+
+        final profile = snapshot.data;
+        if (profile == null) {
+          return const HodooriLoginScreen();
+        }
+
+        return _destinationForProfile(profile);
+      },
+    );
+  }
+}
+
+class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }
@@ -187,25 +323,7 @@ class _HodooriLoginScreenState extends State<HodooriLoginScreen>
   }
 
   Widget _destinationForProfile(AppUserProfile profile) {
-    if (profile.role == 'Department') return const DepartmentDashboard();
-    if (profile.role == 'Student') {
-      return StudentsPage(
-        selfViewOnly: true,
-        studentDocumentId: profile.linkedDocumentId,
-        studentEmail: profile.email,
-      );
-    }
-    if (profile.role == 'Teacher') {
-      return TeacherProfilePage(
-        teacherId: profile.linkedDocumentId,
-        teacherEmail: profile.email,
-      );
-    }
-    return RoleHomePage(
-      role: profile.role,
-      email: profile.email,
-      displayName: profile.displayName,
-    );
+    return _destinationForProfile(profile);
   }
 
   Future<void> _handleLogin() async {

@@ -9,6 +9,7 @@ class StudentModel {
     required this.subjectIds,
     this.groupName,
     this.levelId,
+    this.age,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class StudentModel {
   final List<String> subjectIds;
   final String? groupName;
   final String? levelId;
+  final int? age;
 
   factory StudentModel.fromMap(String id, Map<String, dynamic> map) {
     return StudentModel(
@@ -33,6 +35,7 @@ class StudentModel {
           .map((e) => e.toString())
           .toList(),
       levelId: (map['levelId'] as String?)?.trim(),
+      age: (map['age'] as num?)?.round(),
     );
   }
 
@@ -46,6 +49,7 @@ class StudentModel {
     List<String>? subjectIds,
     String? groupName,
     String? levelId,
+    int? age,
   }) {
     return StudentModel(
       id: id ?? this.id,
@@ -57,6 +61,7 @@ class StudentModel {
       subjectIds: subjectIds ?? this.subjectIds,
       groupName: groupName ?? this.groupName,
       levelId: levelId ?? this.levelId,
+      age: age ?? this.age,
     );
   }
 
@@ -68,6 +73,7 @@ class StudentModel {
       'groupId': groupId,
       'classId': classId,
       'subjectIds': subjectIds,
+      if (age != null) 'age': age,
       if (levelId != null && levelId!.isNotEmpty) 'levelId': levelId,
     };
   }

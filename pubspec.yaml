@@ -48,6 +48,8 @@ dependencies:
   provider: ^6.1.5+1
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.11.0
+
   flutter_test:
     sdk: flutter
 
@@ -99,3 +101,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Configuration for flutter_launcher_icons
+flutter_icons:
+  android: true
+  ios: false
+  image_path: "assets/l10n/images/logo_hodori.png"

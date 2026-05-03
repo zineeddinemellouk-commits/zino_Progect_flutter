@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/models/group_model.dart';
 import 'package:test/models/level_model.dart';
+import 'package:test/models/student_model.dart';
 import 'package:test/pages/departement/common_widgets.dart';
 import 'package:test/pages/departement/providers/student_management_provider.dart';
 import 'package:test/pages/departement/widgets/student_info_card.dart';
@@ -21,7 +22,7 @@ class StudentsScreen extends StatelessWidget {
   Future<void> _showEditStudentDialog(
     BuildContext context,
     StudentsScreenArgs args,
-    dynamic student,
+    StudentModel student,
   ) async {
     await showDialog<void>(
       context: context,
@@ -31,7 +32,7 @@ class StudentsScreen extends StatelessWidget {
 
   Future<void> _confirmDeleteStudent(
     BuildContext context,
-    dynamic student,
+    StudentModel student,
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -66,9 +67,9 @@ class StudentsScreen extends StatelessWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to delete student: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete student: $e')),
+      );
     }
   }
 
@@ -143,12 +144,12 @@ class StudentsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    StreamBuilder(
+                    StreamBuilder<List<StudentModel>>(
                       stream: context
                           .read<StudentManagementProvider>()
                           .watchStudentsByGroup(groupId: args.group.id),
                       builder: (context, snapshot) {
-                        final students = snapshot.data ?? const [];
+                        final students = snapshot.data ?? const <StudentModel>[];
                         return Text(
                           '${students.length} students found',
                           style: TextStyle(
@@ -166,7 +167,7 @@ class StudentsScreen extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: StreamBuilder(
+              child: StreamBuilder<List<StudentModel>>(
                 stream: context
                     .read<StudentManagementProvider>()
                     .watchStudentsByGroup(groupId: args.group.id),
@@ -185,7 +186,7 @@ class StudentsScreen extends StatelessWidget {
                     );
                   }
 
-                  final students = snapshot.data ?? const [];
+                  final students = snapshot.data ?? const <StudentModel>[];
 
                   if (students.isEmpty) {
                     return Center(
@@ -196,31 +197,22 @@ class StudentsScreen extends StatelessWidget {
                     );
                   }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: students.length,
-                          itemBuilder: (context, index) {
-                            return StudentInfoCard(
-                              student: students[index],
-                              fallbackGroupName: args.group.name,
-                              onEdit: () => _showEditStudentDialog(
-                                context,
-                                args,
-                                students[index],
-                              ),
-                              onDelete: () => _confirmDeleteStudent(
-                                context,
-                                students[index],
-                              ),
-                            );
-                          },
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                    itemCount: students.length,
+                    itemBuilder: (context, index) {
+                      final student = students[index];
+                      return StudentInfoCard(
+                        student: student,
+                        fallbackGroupName: args.group.name,
+                        onEdit: () => _showEditStudentDialog(
+                          context,
+                          args,
+                          student,
                         ),
-                      ),
-                    ],
+                        onDelete: () => _confirmDeleteStudent(context, student),
+                      );
+                    },
                   );
                 },
               ),
@@ -245,7 +237,7 @@ class StudentsScreen extends StatelessWidget {
 class _EditStudentDialog extends StatefulWidget {
   const _EditStudentDialog({required this.student, required this.args});
 
-  final dynamic student;
+  final StudentModel student;
   final StudentsScreenArgs args;
 
   @override
@@ -257,6 +249,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _emailController;
   late final TextEditingController _attendanceController;
+  late final TextEditingController _ageController;
   bool _isSaving = false;
 
   @override
@@ -268,6 +261,9 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
     _attendanceController = TextEditingController(
       text: widget.student.attendancePercentage.toString(),
     );
+    _ageController = TextEditingController(
+      text: widget.student.age?.toString() ?? '',
+    );
   }
 
   @override
@@ -275,6 +271,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
     _nameController.dispose();
     _emailController.dispose();
     _attendanceController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -297,9 +294,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if ((value ?? '').trim().isEmpty) {
-                      return 'Name is required';
-                    }
+                    if ((value ?? '').trim().isEmpty) return 'Name is required';
                     return null;
                   },
                 ),
@@ -314,9 +309,7 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                   validator: (value) {
                     final email = (value ?? '').trim();
                     if (email.isEmpty) return 'Email is required';
-                    if (!RegExp(
-                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                    ).hasMatch(email)) {
+                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
                       return 'Enter a valid email';
                     }
                     return null;
@@ -335,6 +328,24 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
                     if (parsed == null) return 'Attendance must be a number';
                     if (parsed < 0 || parsed > 100) {
                       return 'Attendance must be between 0 and 100';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Age (years)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) return null;
+                    final parsed = int.tryParse(value!.trim());
+                    if (parsed == null) return 'Age must be a number';
+                    if (parsed <= 0 || parsed > 200) {
+                      return 'Enter a valid age';
                     }
                     return null;
                   },
@@ -369,15 +380,18 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
     setState(() => _isSaving = true);
     try {
       await context.read<StudentManagementProvider>().updateStudent(
-        id: widget.student.id,
-        fullName: _nameController.text,
-        email: _emailController.text,
-        attendancePercentage: int.parse(_attendanceController.text.trim()),
-        groupId: widget.args.group.id,
-        classId: widget.student.classId,
-        subjectIds: List<String>.from(widget.student.subjectIds),
-        levelId: widget.args.level.id,
-      );
+            id: widget.student.id,
+            fullName: _nameController.text,
+            email: _emailController.text,
+            attendancePercentage: int.parse(_attendanceController.text.trim()),
+            groupId: widget.args.group.id,
+            classId: widget.student.classId,
+            subjectIds: List<String>.from(widget.student.subjectIds),
+            levelId: widget.args.level.id,
+            age: _ageController.text.trim().isEmpty
+                ? null
+                : int.parse(_ageController.text.trim()),
+          );
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -386,9 +400,9 @@ class _EditStudentDialogState extends State<_EditStudentDialog> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to update student: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update student: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -412,6 +426,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmPasswordController;
+  late final TextEditingController _ageController;
   bool _isSaving = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
@@ -424,6 +439,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+    _ageController = TextEditingController();
   }
 
   @override
@@ -432,6 +448,7 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -447,7 +464,6 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag Handle
               Padding(
                 padding: const EdgeInsets.only(top: 12, bottom: 16),
                 child: Container(
@@ -459,7 +475,6 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                   ),
                 ),
               ),
-              // Gradient Header
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(20),
@@ -513,14 +528,12 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Form Fields
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Full Name Field
                       TextFormField(
                         controller: _nameController,
                         decoration: InputDecoration(
@@ -528,9 +541,10 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                           hintText: 'Enter full name',
                           prefixIcon: Icon(
                             Icons.badge_outlined,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                           filled: true,
                           fillColor: Theme.of(context).scaffoldBackgroundColor,
@@ -556,7 +570,6 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Email Field
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -565,9 +578,10 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                           hintText: 'Enter email address',
                           prefixIcon: Icon(
                             Icons.email_outlined,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                           filled: true,
                           fillColor: Theme.of(context).scaffoldBackgroundColor,
@@ -597,7 +611,6 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Password Field
                       TextFormField(
                         controller: _passwordController,
                         obscureText: !_showPassword,
@@ -606,18 +619,20 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                           hintText: 'Create password',
                           prefixIcon: Icon(
                             Icons.lock_outlined,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _showPassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                             ),
                             onPressed: () {
                               setState(() => _showPassword = !_showPassword);
@@ -650,7 +665,6 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                         },
                       ),
                       const SizedBox(height: 14),
-                      // Confirm Password Field
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: !_showConfirmPassword,
@@ -659,18 +673,20 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                           hintText: 'Confirm password',
                           prefixIcon: Icon(
                             Icons.verified_outlined,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _showConfirmPassword
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.5),
                             ),
                             onPressed: () {
                               setState(
@@ -705,12 +721,51 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                           return null;
                         },
                       ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _ageController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Age (years)',
+                          hintText: 'Optional',
+                          prefixIcon: Icon(
+                            Icons.cake_outlined,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.5),
+                          ),
+                          filled: true,
+                          fillColor: Theme.of(context).scaffoldBackgroundColor,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2563EB),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        validator: (value) {
+                          if ((value ?? '').trim().isEmpty) return null;
+                          final parsed = int.tryParse(value!.trim());
+                          if (parsed == null) return 'Age must be a number';
+                          if (parsed <= 0 || parsed > 200) {
+                            return 'Enter a valid age';
+                          }
+                          return null;
+                        },
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
-              // Action Buttons
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -796,13 +851,16 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
     setState(() => _isSaving = true);
     try {
       await context.read<StudentManagementProvider>().addStudent(
-        fullName: _nameController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-        attendancePercentage: 0,
-        groupId: widget.args.group.id,
-        levelId: widget.args.level.id,
-      );
+            fullName: _nameController.text,
+            email: _emailController.text,
+            password: _passwordController.text,
+            attendancePercentage: 0,
+            groupId: widget.args.group.id,
+            levelId: widget.args.level.id,
+            age: _ageController.text.trim().isEmpty
+                ? null
+                : int.parse(_ageController.text.trim()),
+          );
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -811,9 +869,9 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to add student: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add student: $e')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);

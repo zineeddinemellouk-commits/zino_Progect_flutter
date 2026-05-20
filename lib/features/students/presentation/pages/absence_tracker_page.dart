@@ -5,6 +5,8 @@ import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/features/students/presentation/pages/justification_page.dart';
 
+enum JustificationFilter { all, pending, accepted, refused }
+
 class AbsenceTrackerPage extends StatefulWidget {
   const AbsenceTrackerPage({super.key});
 
@@ -15,12 +17,122 @@ class AbsenceTrackerPage extends StatefulWidget {
 class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
   late final StudentsFirestoreService _service;
   late final FirebaseFirestore _firestore;
+  JustificationFilter _selectedFilter = JustificationFilter.all;
 
   @override
   void initState() {
     super.initState();
     _service = StudentsFirestoreService();
     _firestore = FirebaseFirestore.instance;
+    _cleanupExpiredJustifications();
+  }
+
+  Future<void> _cleanupExpiredJustifications() async {
+    try {
+      await _service.deleteExpiredJustifications();
+    } catch (e) {
+      print('[AbsenceTrackerPage] Error cleaning up expired justifications: $e');
+    }
+  }
+
+  Future<String?> _getJustificationStatus(String absenceId) async {
+    try {
+      final query = await _firestore
+          .collection('justifications')
+          .where('absenceId', isEqualTo: absenceId)
+          .limit(1)
+          .get();
+
+      if (query.docs.isEmpty) return null;
+      return query.docs.first.data()['status'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<List<AbsenceFeatureModel>> _filterAbsences(
+    List<AbsenceFeatureModel> absences,
+  ) async {
+    if (_selectedFilter == JustificationFilter.all) {
+      return absences;
+    }
+
+    final filtered = <AbsenceFeatureModel>[];
+
+    for (final absence in absences) {
+      final justStatus = await _getJustificationStatus(absence.id);
+
+      switch (_selectedFilter) {
+        case JustificationFilter.pending:
+          if (justStatus == null ||
+              justStatus.toLowerCase() == 'pending' ||
+              justStatus.toLowerCase() == 'submitted') {
+            filtered.add(absence);
+          }
+        case JustificationFilter.accepted:
+          if (justStatus != null &&
+              justStatus.toLowerCase() == 'accepted') {
+            filtered.add(absence);
+          }
+        case JustificationFilter.refused:
+          if (justStatus != null &&
+              justStatus.toLowerCase() == 'refused') {
+            filtered.add(absence);
+          }
+        case JustificationFilter.all:
+          break;
+      }
+    }
+
+    return filtered;
+  }
+
+  Widget _buildFilterChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final filter in JustificationFilter.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(
+                  filter == JustificationFilter.all
+                      ? 'All'
+                      : filter.toString().split('.').last[0].toUpperCase() +
+                          filter
+                              .toString()
+                              .split('.')
+                              .last
+                              .substring(1),
+                ),
+                selected: _selectedFilter == filter,
+                onSelected: (selected) {
+                  if (selected) {
+                    setState(() {
+                      _selectedFilter = filter;
+                    });
+                  }
+                },
+                backgroundColor: Colors.grey[100],
+                selectedColor: const Color(0xFF5A5FE8),
+                labelStyle: TextStyle(
+                  color: _selectedFilter == filter
+                      ? Colors.white
+                      : const Color(0xFF667085),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                side: BorderSide(
+                  color: _selectedFilter == filter
+                      ? const Color(0xFF5A5FE8)
+                      : Colors.grey[300]!,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -72,12 +184,7 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF4F46E5)),
-            onPressed: () {},
-          ),
-        ],
+        
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _firestore
@@ -308,9 +415,50 @@ class _AbsenceTrackerPageState extends State<AbsenceTrackerPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  ...absences.map((absence) {
-                    return _AbsenceCard(absence: absence, service: _service);
-                  }),
+                  _buildFilterChips(),
+                  const SizedBox(height: 16),
+                  FutureBuilder<List<AbsenceFeatureModel>>(
+                    future: _filterAbsences(absences),
+                    builder: (context, filterSnapshot) {
+                      if (filterSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final filteredAbsences =
+                          filterSnapshot.data ?? [];
+
+                      if (filteredAbsences.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 32),
+                          child: Center(
+                            child: Text(
+                              'No ${_selectedFilter.toString().split('.').last} justifications',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Column(
+                        children: filteredAbsences
+                            .map((absence) =>
+                                _AbsenceCard(
+                                  absence: absence,
+                                  service: _service,
+                                ))
+                            .toList(),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

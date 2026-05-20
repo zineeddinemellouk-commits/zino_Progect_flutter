@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:test/models/absence_model.dart';
-import 'package:test/models/subject_model.dart';
-import 'package:test/models/teacher_model.dart';
+import 'package:test/core/constants/absence_model.dart';
+import 'package:test/core/constants/subject_model.dart';
+import 'package:test/core/constants/teacher_model.dart';
 
 /// Model for subject attendance statistics
 class SubjectAttendanceModel {

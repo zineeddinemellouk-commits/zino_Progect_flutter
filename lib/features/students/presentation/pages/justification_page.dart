@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
-import 'package:test/helpers/localization_helper.dart';
+import 'package:test/core/helpers/localization_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class JustificationPage extends StatefulWidget {
@@ -906,3 +906,4 @@ class _JustificationPageState extends State<JustificationPage> {
     return fallback;
   }
 }
+

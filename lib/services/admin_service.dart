@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:test/models/admin_model.dart';
+import 'package:test/core/constants/admin_model.dart';
 
 class AdminService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;

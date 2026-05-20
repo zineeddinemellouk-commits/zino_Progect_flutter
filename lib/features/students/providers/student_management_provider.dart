@@ -1,0 +1,444 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:test/core/constants/class_model.dart';
+import 'package:test/core/constants/exclusion_model.dart';
+import 'package:test/core/constants/group_model.dart';
+import 'package:test/core/constants/justification_model.dart';
+import 'package:test/core/constants/level_model.dart';
+import 'package:test/core/constants/student_model.dart';
+import 'package:test/core/constants/subject_model.dart';
+import 'package:test/core/constants/teacher_model.dart';
+import 'package:test/core/constants/app_user_profile.dart';
+import 'package:test/services/department_auth_service.dart';
+import 'package:test/services/auth_service.dart';
+import 'package:test/services/firestore_service.dart';
+
+/// Provider for managing student-related operations
+/// Handles CRUD operations and state management
+class StudentManagementProvider extends ChangeNotifier {
+  StudentManagementProvider();
+
+  final FirestoreService _firestoreService = FirestoreService();
+  final DepartmentAuthService _authService = DepartmentAuthService();
+
+  /// Best-effort base data seeding. This should never crash the app when
+  /// Firestore rules deny writes.
+  Future<void> initializeBaseData() async {
+    try {
+      await _firestoreService.ensureBaseData();
+    } on FirebaseException catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Firestore base-data init skipped: ${e.code} ${e.message}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Unexpected base-data init error: $e');
+      }
+    }
+  }
+
+  /// Watches all levels (L1, L2, L3, M1, M2)
+  Stream<List<LevelModel>> watchLevels() {
+    try {
+      return _firestoreService.watchLevels();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error watching levels: $e');
+      return Stream.value(const []);
+    }
+  }
+
+  /// Watches groups for a specific level (requires levelId parameter)
+  Stream<List<GroupModel>> watchGroupsByLevel({required String levelId}) {
+    try {
+      if (levelId.isEmpty) {
+        return Stream.value(const []);
+      }
+      return _firestoreService.watchGroupsByLevel(levelId);
+    } catch (e) {
+      if (kDebugMode) print('❌ Error watching groups: $e');
+      return Stream.value(const []);
+    }
+  }
+
+  /// Watches students in a specific group (requires groupId parameter)
+  Stream<List<StudentModel>> watchStudentsByGroup({required String groupId}) {
+    try {
+      if (groupId.isEmpty) {
+        return Stream.value(const []);
+      }
+      return _firestoreService.watchStudentsByGroup(groupId);
+    } catch (e) {
+      if (kDebugMode) print('❌ Error watching students: $e');
+      return Stream.value(const []);
+    }
+  }
+
+  /// Adds a new student to local placeholder state and notifies listeners
+  Future<void> addStudent({
+    required String fullName,
+    required String email,
+    required String password,
+    required int attendancePercentage,
+    required String groupId,
+    String? levelId,
+    int? age,
+  }) async {
+    try {
+      // Validate inputs
+      fullName = fullName.trim();
+      email = email.trim();
+      password = password.trim();
+
+      if (fullName.isEmpty) {
+        throw Exception('Student name cannot be empty');
+      }
+      if (email.isEmpty) {
+        throw Exception('Email cannot be empty');
+      }
+      if (password.length < 6) {
+        throw Exception('Password must be at least 6 characters');
+      }
+      if (!_isValidEmail(email)) {
+        throw Exception('Invalid email format');
+      }
+      if (attendancePercentage < 0 || attendancePercentage > 100) {
+        throw Exception('Attendance must be between 0 and 100');
+      }
+      if (groupId.isEmpty) {
+        throw Exception('Group ID cannot be empty');
+      }
+
+      if (kDebugMode) print('✅ Adding student: $fullName');
+      final authUid = await _authService.createManagedAccount(
+        email: email,
+        password: password,
+      );
+
+      String? studentId;
+      try {
+        studentId = await _firestoreService.addStudent(
+          fullName: fullName,
+          email: email,
+          attendancePercentage: attendancePercentage,
+          groupId: groupId,
+          classId: groupId,
+          subjectIds: const [],
+          levelId: levelId,
+          age: age,
+          authUid: authUid,
+        );
+
+        await _authService.saveUserProfile(
+          AppUserProfile(
+            uid: authUid,
+            email: email,
+            role: 'Student',
+            displayName: fullName,
+            linkedCollection: 'students',
+            linkedDocumentId: studentId,
+          ),
+        );
+
+        await _authService.signOutManagedAccount();
+      } catch (e) {
+        if (studentId != null) {
+          await _firestoreService.deleteStudent(studentId);
+        }
+        await _authService.deletePendingManagedAccount();
+        rethrow;
+      }
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error adding student: $e');
+      rethrow; // Re-throw to let UI handle it
+    }
+  }
+
+  /// Adds a new group to local placeholder state and notifies listeners
+  Future<void> addGroup({required String name, required String levelId}) async {
+    try {
+      name = name.trim();
+
+      if (name.isEmpty) {
+        throw Exception('Group name cannot be empty');
+      }
+      if (levelId.isEmpty) {
+        throw Exception('Level ID cannot be empty');
+      }
+
+      if (kDebugMode) print('✅ Adding group: $name to level $levelId');
+      await _firestoreService.addGroup(name: name, levelId: levelId);
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error adding group: $e');
+      rethrow;
+    }
+  }
+
+  /// Validates email format (RFC 5322 compliant)
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$');
+    return emailRegex.hasMatch(email) && email.length <= 254;
+  }
+
+  Stream<List<StudentModel>> watchAllStudents() {
+    return _firestoreService.watchAllStudents();
+  }
+
+  Stream<AttendanceOverviewStats> watchAttendanceOverview() {
+    return _firestoreService.watchAttendanceOverview();
+  }
+
+  Stream<List<TeacherModel>> watchTeachers() {
+    return _firestoreService.watchTeachers();
+  }
+
+  Stream<List<SubjectModel>> watchSubjects() {
+    return _firestoreService.watchSubjects();
+  }
+
+  Stream<List<ClassModel>> watchClasses() {
+    return _firestoreService.watchClasses();
+  }
+
+  Stream<List<JustificationModel>> watchJustifications() {
+    return _firestoreService.watchJustifications();
+  }
+
+  Stream<List<ExclusionModel>> watchPendingExclusions() {
+    return _firestoreService.watchPendingExclusions();
+  }
+
+  Future<void> addTeacher({
+    required String fullName,
+    required String email,
+    required String password,
+    required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
+  }) async {
+    fullName = fullName.trim();
+    email = email.trim();
+    password = password.trim();
+
+    if (fullName.isEmpty) throw Exception('Teacher name cannot be empty');
+    if (password.length < 6) {
+      throw Exception('Password must be at least 6 characters');
+    }
+    if (!_isValidEmail(email)) throw Exception('Invalid email format');
+
+    final authUid = await _authService.createManagedAccount(
+      email: email,
+      password: password,
+    );
+
+    String? teacherId;
+    try {
+      teacherId = await _firestoreService.addTeacher(
+        fullName: fullName,
+        email: email,
+        subjectIds: subjectIds,
+        levelIds: levelIds,
+        groupIds: groupIds,
+        authUid: authUid,
+      );
+
+      await _authService.saveUserProfile(
+        AppUserProfile(
+          uid: authUid,
+          email: email,
+          role: 'Teacher',
+          displayName: fullName,
+          linkedCollection: 'teachers',
+          linkedDocumentId: teacherId,
+        ),
+      );
+
+      await _authService.signOutManagedAccount();
+    } catch (e) {
+      if (teacherId != null) {
+        await _firestoreService.deleteTeacher(teacherId);
+      }
+      await _authService.deletePendingManagedAccount();
+      rethrow;
+    }
+    notifyListeners();
+  }
+
+  Future<void> addSubject({
+    required String name,
+    required String teacherId,
+    required List<String> classIds,
+  }) async {
+    name = name.trim();
+    teacherId = teacherId.trim();
+
+    if (name.isEmpty) throw Exception('Subject name cannot be empty');
+    if (classIds.isEmpty) throw Exception('Select at least one class');
+
+    await _firestoreService.addSubject(
+      name: name,
+      teacherId: teacherId,
+      classIds: classIds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateSubject({
+    required String id,
+    required String name,
+    required String teacherId,
+    required List<String> classIds,
+  }) async {
+    try {
+      name = name.trim();
+      teacherId = teacherId.trim();
+
+      if (name.isEmpty) throw Exception('Subject name cannot be empty');
+      if (teacherId.isEmpty) throw Exception('Teacher ID cannot be empty');
+      if (classIds.isEmpty) throw Exception('Select at least one class');
+
+      if (kDebugMode) print('✅ Updating subject: $name');
+      await _firestoreService.updateSubject(
+        id: id,
+        name: name,
+        teacherId: teacherId,
+        classIds: classIds,
+      );
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error updating subject: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSubject(String subjectId) async {
+    try {
+      if (subjectId.isEmpty) throw Exception('Subject ID cannot be empty');
+
+      if (kDebugMode) print('✅ Deleting subject: $subjectId');
+      await _firestoreService.deleteSubject(subjectId);
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error deleting subject: $e');
+      rethrow;
+    }
+  }
+
+  Future<SubjectModel> getSubjectById(String subjectId) async {
+    try {
+      final id = subjectId.trim();
+      if (id.isEmpty) throw Exception('Subject ID cannot be empty');
+      return await _firestoreService.getSubjectById(id);
+    } catch (e) {
+      if (kDebugMode) print('❌ Error loading subject by ID: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateSubjectFromEditor({
+    required String subjectId,
+    required String name,
+    String? teacherId,
+  }) async {
+    try {
+      final id = subjectId.trim();
+      final normalizedName = name.trim();
+
+      if (id.isEmpty) throw Exception('Subject ID cannot be empty');
+      if (normalizedName.isEmpty) {
+        throw Exception('Subject name cannot be empty');
+      }
+
+      await _firestoreService.updateSubjectFromEditor(
+        subjectId: id,
+        name: normalizedName,
+        teacherId: teacherId,
+      );
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('❌ Error updating subject from editor: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateJustificationStatus({
+    required String id,
+    required String status,
+    String? refusalReason,
+  }) async {
+    await _firestoreService.updateJustificationStatus(
+      id: id,
+      status: status,
+      refusalReason: refusalReason,
+    );
+    notifyListeners();
+  }
+
+  Future<void> updateExclusionStatus({
+    required String id,
+    required String status,
+  }) async {
+    await _firestoreService.updateExclusionStatus(id: id, status: status);
+    notifyListeners();
+  }
+
+  Future<void> updateStudent({
+    required String id,
+    required String fullName,
+    required String email,
+    required int attendancePercentage,
+    required String groupId,
+    required String classId,
+    required List<String> subjectIds,
+    String? levelId,
+    int? age,
+  }) async {
+    await _firestoreService.updateStudent(
+      id: id,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      attendancePercentage: attendancePercentage,
+      groupId: groupId,
+      classId: classId,
+      subjectIds: subjectIds,
+      levelId: levelId,
+      age: age,
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteStudent(String id) async {
+    await _firestoreService.deleteStudent(id);
+    notifyListeners();
+  }
+
+  Future<void> updateTeacher({
+    required String id,
+    required String fullName,
+    required String email,
+    required List<String> subjectIds,
+    required List<String> levelIds,
+    required List<String> groupIds,
+  }) async {
+    await _firestoreService.updateTeacher(
+      id: id,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      subjectIds: subjectIds,
+      levelIds: levelIds,
+      groupIds: groupIds,
+    );
+    notifyListeners();
+  }
+
+  Future<void> deleteTeacher(String id) async {
+    await _firestoreService.deleteTeacher(id);
+    notifyListeners();
+  }
+
+  Future<void> logout(BuildContext context) async {
+    await AuthService.logout(context);
+  }
+}

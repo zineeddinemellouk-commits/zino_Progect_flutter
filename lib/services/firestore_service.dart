@@ -1,14 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:test/models/absence_model.dart';
-import 'package:test/models/class_model.dart';
-import 'package:test/models/exclusion_model.dart';
-import 'package:test/models/group_model.dart';
-import 'package:test/models/justification_model.dart';
-import 'package:test/models/level_model.dart';
-import 'package:test/models/student_model.dart';
-import 'package:test/models/subject_model.dart';
-import 'package:test/models/teacher_model.dart';
+import 'package:test/core/constants/absence_model.dart';
+import 'package:test/core/constants/class_model.dart';
+import 'package:test/core/constants/exclusion_model.dart';
+import 'package:test/core/constants/group_model.dart';
+import 'package:test/core/constants/justification_model.dart';
+import 'package:test/core/constants/level_model.dart';
+import 'package:test/core/constants/student_model.dart';
+import 'package:test/core/constants/subject_model.dart';
+import 'package:test/core/constants/teacher_model.dart';
 
 class AttendanceOverviewStats {
   const AttendanceOverviewStats({

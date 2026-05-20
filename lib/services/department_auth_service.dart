@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test/firebase_options.dart';
-import 'package:test/models/app_user_profile.dart';
+import 'package:test/core/constants/app_user_profile.dart';
+import 'package:test/services/auth_service.dart';
 
 class DepartmentAuthService {
   DepartmentAuthService({FirebaseFirestore? firestore})
@@ -231,7 +231,7 @@ class DepartmentAuthService {
         await saveUserProfile(repaired);
         return repaired;
       }
-      await auth.signOut();
+      await AuthService.signOutSilently();
       throw FirebaseAuthException(
         code: 'wrong-role',
         message: 'This account is registered as ${profile.role}.',
@@ -247,25 +247,19 @@ class DepartmentAuthService {
     if (user != null) {
       await user.delete();
     }
-    await auth.signOut();
+    await AuthService.signOutFirebaseAuth(auth);
   }
 
   Future<void> signOutManagedAccount() async {
     final auth = await _secondaryAuth();
-    await auth.signOut();
+    await AuthService.signOutFirebaseAuth(auth);
   }
 
   Future<void> sendPasswordResetEmail({required String email}) async {
     await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
   }
 
-  Future<void> signOut() async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-    } catch (_) {
-      // Ignore Supabase sign-out failures so Firebase sign-out still runs.
-    }
-
-    await FirebaseAuth.instance.signOut();
+  Future<void> logoutSilently() async {
+    await AuthService.signOutSilently();
   }
 }

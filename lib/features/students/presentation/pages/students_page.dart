@@ -5,8 +5,7 @@ import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/students/presentation/pages/absence_tracker_page.dart';
 import 'package:test/features/students/presentation/pages/student_attendance_page.dart';
 import 'package:test/features/students/presentation/pages/student_profile_page.dart';
-import 'package:test/main.dart'; // ✅ FIXED
-import 'package:test/services/department_auth_service.dart';
+import 'package:test/services/auth_service.dart';
 
 extension AttendanceGrading on double {
   String get gradeLabel {
@@ -42,23 +41,10 @@ class StudentsPage extends StatefulWidget {
 
 class _StudentsPageState extends State<StudentsPage> {
   final StudentsFirestoreService _service = StudentsFirestoreService();
-  final DepartmentAuthService _authService = DepartmentAuthService();
   int _selectedNavIndex = 0;
 
   Future<void> _logout() async {
-    await _authService.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()), // ✅ FIXED
-      (route) => false,
-    );
-  }
-
-  Future<void> _showStudentFormDialog({StudentFeatureModel? existing}) async {
-    await showDialog<void>(
-      context: context,
-      builder: (_) => _StudentFormDialog(existing: existing, service: _service),
-    );
+    await AuthService.logout(context);
   }
 
   @override
@@ -121,7 +107,6 @@ class _StudentsPageState extends State<StudentsPage> {
           };
           final presentCount = firstStudent?.totalPresence ?? 0;
           final absentCount = firstStudent?.totalAbsence ?? 0;
-          final activeTerm = DateTime.now().year;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -163,7 +148,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                   color: isDark ? Colors.white : const Color(0xFF101828),
                                   fontSize: 28,
                                   fontWeight: FontWeight.w600,
-                                  fontFamily: 'Inter',
+                                  fontFamily: 'Poppins',
                                   height: 1.2,
                                 ),
                               ),
@@ -174,7 +159,7 @@ class _StudentsPageState extends State<StudentsPage> {
                                     color: isDark ? Colors.white : const Color(0xFF101828),
                                     fontSize: 42,
                                     fontWeight: FontWeight.w900,
-                                    fontFamily: 'Inter',
+                                    fontFamily: 'Poppins',
                                     height: 1.0,
                                   ),
                                 ),

@@ -1,6 +1,6 @@
-import 'package:test/models/group_model.dart';
-import 'package:test/models/level_model.dart';
-import 'package:test/models/student_model.dart';
+import 'package:test/core/constants/group_model.dart';
+import 'package:test/core/constants/level_model.dart';
+import 'package:test/core/constants/student_model.dart';
 
 /// In-memory placeholder data source used after database removal.
 class LocalDataService {

@@ -1,6 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:test/services/role_manager.dart';
+import 'package:test/core/widgets/restart_widget.dart';
 
 /// Secure authentication service that integrates role-based access control
 /// This replaces the existing simple auth flow with a secure one
@@ -27,6 +31,25 @@ class AuthService {
 
   /// Check if user is currently authenticated
   bool get isAuthenticated => _firebaseAuth.currentUser != null;
+
+  static Future<void> _signOutProviders() async {
+    await Future.wait([
+      signOutFirebaseAuth(FirebaseAuth.instance),
+      Supabase.instance.client.auth.signOut(),
+    ]);
+  }
+
+  static Future<void> signOutFirebaseAuth(FirebaseAuth auth) async {
+    await auth.signOut();
+  }
+
+  static Future<void> signOutSilently() async {
+    try {
+      await _signOutProviders();
+    } catch (e) {
+      debugPrint('Silent sign-out error: $e');
+    }
+  }
 
   /// Login user with email and password
   /// This is the primary secure login flow
@@ -55,7 +78,7 @@ class AuthService {
       await roleManager.initializeFromFirestore();
 
       if (roleManager.currentRole == UserRole.unknown) {
-        await _firebaseAuth.signOut();
+        await signOutSilently();
         throw FirebaseAuthException(
           code: 'invalid-role',
           message: 'User role is not configured. Contact administrator.',
@@ -176,16 +199,19 @@ class AuthService {
     }
   }
 
-  /// Logout user and clear role
-  Future<void> logout({RoleManager? roleManager}) async {
+  /// Logout user, clear local cache, and restart the app.
+  static Future<void> logout(BuildContext context) async {
     try {
-      // Clear role manager if provided
-      roleManager?.clearRole();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
 
-      // Sign out from Firebase
-      await _firebaseAuth.signOut();
+      await _signOutProviders();
     } catch (e) {
-      throw Exception('Logout failed: ${e.toString()}');
+      debugPrint('Logout error: $e');
+    } finally {
+      if (context.mounted) {
+        RestartWidget.restartApp(context);
+      }
     }
   }
 

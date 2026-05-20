@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
-import 'package:test/services/department_auth_service.dart';
 import 'package:test/services/firestore_service.dart';
-import 'package:test/models/subject_model.dart';
-import 'package:test/main.dart';
+import 'package:test/core/constants/subject_model.dart';
+import 'package:test/services/auth_service.dart';
 
 class StudentProfilePage extends StatefulWidget {
   const StudentProfilePage({super.key, this.studentId, this.studentEmail});
@@ -20,17 +19,11 @@ class StudentProfilePage extends StatefulWidget {
 class _StudentProfilePageState extends State<StudentProfilePage> {
   final StudentsFirestoreService _service = StudentsFirestoreService();
   final FirestoreService _firestoreService = FirestoreService();
-  final DepartmentAuthService _authService = DepartmentAuthService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   bool _isChangingPassword = false;
 
   Future<void> _logout() async {
-    await _authService.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()),
-      (route) => false,
-    );
+    await AuthService.logout(context);
   }
 
   Future<String> _getTeacherName(String teacherId) async {

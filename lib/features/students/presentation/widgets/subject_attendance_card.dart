@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/students/services/attendance_service.dart';
-import 'package:test/utils/app_theme.dart';
+import 'package:test/core/utils/app_theme.dart';
 
 /// Reusable card widget for displaying subject attendance
 class SubjectAttendanceCard extends StatelessWidget {
@@ -67,10 +67,10 @@ class SubjectAttendanceCard extends StatelessWidget {
 
   /// Get progress bar color based on percentage
   Color _getProgressBarColor() {
-    if (stats.attendancePercentage < 70) {
+    if (stats.attendancePercentage < 30) {
       return const Color(0xFFEF5350); // Red
     }
-    if (stats.attendancePercentage < 85) {
+    if (stats.attendancePercentage < 70) {
       return const Color(0xFFFFA726); // Orange
     }
     return const Color(0xFF4CAF50); // Green
@@ -222,7 +222,7 @@ class SubjectAttendanceCard extends StatelessWidget {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF5350).withValues(alpha: 0.1),
+                      color:  Color(0xFFEF5350).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: const Row(
@@ -289,3 +289,4 @@ class SubjectAttendanceCard extends StatelessWidget {
     );
   }
 }
+

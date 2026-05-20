@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/teachers/models/teacher_feature_model.dart';
-import 'package:test/models/group_model.dart';
-import 'package:test/models/level_model.dart';
-import 'package:test/models/subject_model.dart';
+import 'package:test/core/constants/group_model.dart';
+import 'package:test/core/constants/level_model.dart';
+import 'package:test/core/constants/subject_model.dart';
+import 'package:test/services/absence_notification_service.dart';
 
 class TeacherDashboardData {
   const TeacherDashboardData({
@@ -396,7 +397,7 @@ class TeachersFirestoreService {
         });
   }
 
-  Future<void> submitGroupAttendance({
+  Future<List<Map<String, String>>> submitGroupAttendance({
     required String teacherId,
     required TeacherGroupOverview group,
     required Map<String, bool> isPresentByStudentId,
@@ -461,6 +462,7 @@ class TeachersFirestoreService {
 
     final presentStudentIds = <String>[];
     final absentStudentIds = <String>[];
+    final absentStudentsData = <Map<String, String>>[];
     // Track absence IDs for notification linking
     final absenceIdByStudentId = <String, String>{};
 
@@ -509,13 +511,29 @@ class TeachersFirestoreService {
         presentStudentIds.add(studentDocId);
       } else {
         absentStudentIds.add(studentDocId);
+        final studentName = (data['fullName'] as String?)?.trim() ?? 'Unknown';
+        
+        // Store absent student data for notifications
+        absentStudentsData.add({
+          'studentName': studentName,
+          'subjectName': resolvedSubjectName,
+          'teacherName': teacherName,
+          'absenceId': '', // Will be updated with actual ID below
+        });
+        
         final absenceRef = _absences.doc();
         absenceIdByStudentId[studentDocId] = absenceRef.id;
+        
+        // Update the last added student's absenceId
+        if (absentStudentsData.isNotEmpty) {
+          absentStudentsData.last['absenceId'] = absenceRef.id;
+        }
+        
         batch.set(absenceRef, {
           'studentId':
               authUid, // ✅ FIX: Use authUid (Firebase Auth UID) instead of document ID
           'studentDocId': studentDocId,
-          'studentName': (data['fullName'] as String?)?.trim() ?? 'Unknown',
+          'studentName': studentName,
           'teacherId': normalizedTeacherId,
           'teacherName': teacherName,
           'subjectId': resolvedSubjectId,
@@ -608,6 +626,15 @@ class TeachersFirestoreService {
 
     await batch.commit();
 
+    // Send local push notifications
+    try {
+      await AbsenceNotificationService().sendAbsenceNotificationBatch(
+        absentStudents: absentStudentsData,
+      );
+    } catch (e) {
+      print('[TeachersFirestoreService] Error sending local notifications: $e');
+    }
+
     // Create notifications for absent students with relatedAbsenceId link
     print(
       '[TeachersFirestoreService] Creating ${absentStudentIds.length} notifications for absent students',
@@ -638,9 +665,12 @@ class TeachersFirestoreService {
         );
       }
     }
+
     print(
       '[TeachersFirestoreService] Attendance submitted: ${presentStudentIds.length} present, ${absentStudentIds.length} absent',
     );
+
+    return absentStudentsData;
   }
 
   Future<_AbsenceScopeCounts> _countSubjectAbsenceScope({
@@ -905,6 +935,37 @@ class TeachersFirestoreService {
     final total = totalPresence + totalAbsence;
     if (total == 0) return 0;
     return totalPresence / total;
+  }
+
+  /// Get the count of absences for a student in a specific subject
+  Future<int> getStudentSubjectAbsenceCount({
+    required String studentId,
+    required String subjectId,
+  }) async {
+    if (studentId.trim().isEmpty) {
+      return 0;
+    }
+
+    try {
+      final query = _absences
+          .where('studentId', isEqualTo: studentId.trim())
+          .where('status', isEqualTo: 'pending');
+
+      final snapshot = await query.get();
+
+      // Filter by subject if provided
+      if (subjectId.trim().isNotEmpty) {
+        final filtered = snapshot.docs.where(
+          (doc) => (doc.data()['subjectId'] as String?)?.trim() == subjectId.trim(),
+        );
+        return filtered.length;
+      }
+
+      return snapshot.docs.length;
+    } catch (e) {
+      print('Error getting absence count: $e');
+      return 0;
+    }
   }
 }
 

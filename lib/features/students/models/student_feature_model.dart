@@ -14,6 +14,7 @@ class StudentFeatureModel {
     required this.justifiedAbsence,
     required this.pendingAbsence,
     required this.attendanceRate,
+    this.authUid,
   });
 
   final String id;
@@ -28,6 +29,7 @@ class StudentFeatureModel {
   final int justifiedAbsence;
   final int pendingAbsence;
   final double attendanceRate;
+  final String? authUid;
 
   int get totalSessions => totalPresence + totalAbsence;
 
@@ -63,6 +65,7 @@ class StudentFeatureModel {
       justifiedAbsence: (map['justifiedAbsence'] as num?)?.toInt() ?? 0,
       pendingAbsence: (map['pendingAbsence'] as num?)?.toInt() ?? 0,
       attendanceRate: storedRate ?? computedRate,
+      authUid: (map['authUid'] as String?)?.trim(),
     );
   }
 }

@@ -687,4 +687,36 @@ class StudentsFirestoreService {
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
+
+  /// Delete expired justifications (older than 30 days)
+  Future<void> deleteExpiredJustifications() async {
+    try {
+      final now = DateTime.now();
+      final thirtyDaysAgo =
+          now.subtract(const Duration(days: 30));
+
+      final snapshot = await _justifications
+          .where('createdAt', isLessThan: Timestamp.fromDate(thirtyDaysAgo))
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        print('[StudentsFirestoreService] No expired justifications to delete');
+        return;
+      }
+
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      print(
+        '[StudentsFirestoreService] ✅ Deleted ${snapshot.docs.length} expired justifications',
+      );
+    } catch (e) {
+      print(
+        '[StudentsFirestoreService] ❌ Error deleting expired justifications: $e',
+      );
+    }
+  }
 }

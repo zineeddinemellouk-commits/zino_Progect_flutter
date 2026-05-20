@@ -158,6 +158,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                           onStatusChanged: (status) {
                             record.attendanceStatus = status;
                           },
+                          subjectAbsenceCount: record.subjectAbsenceCount,
                         ),
                       );
                     },
@@ -171,33 +172,40 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
                   ),
                   child: SafeArea(
                     top: false,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submitAttendance,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4A40CF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                    child: Column(
+                      children: [
+                        // Quick Action Buttons
+                       
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isSubmitting ? null : _submitAttendance,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A40CF),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Submit Attendance'),
                           ),
                         ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Submit Attendance'),
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -232,6 +240,32 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
           );
         }),
       );
+
+    // Fetch absence counts asynchronously
+    _fetchAbsenceCounts();
+  }
+
+  Future<void> _fetchAbsenceCounts() async {
+    final subjectId = widget.selectedSubjectId?.trim() ?? '';
+    
+    for (final record in _attendanceRecords) {
+      try {
+        // Use authUid if available, otherwise use id
+        final studentId = record.student.authUid ?? record.student.id;
+        final count = await _service.getStudentSubjectAbsenceCount(
+          studentId: studentId,
+          subjectId: subjectId,
+        );
+        record.subjectAbsenceCount = count;
+      } catch (e) {
+        print('Error fetching absence count for ${record.student.fullName}: $e');
+      }
+    }
+
+    // Trigger a rebuild after fetching counts
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Widget _buildHistoryTab() {
@@ -585,7 +619,7 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
           record.student.id: record.attendanceStatus!,
       };
 
-      await _service.submitGroupAttendance(
+      final absentStudents = await _service.submitGroupAttendance(
         teacherId: widget.teacherId,
         group: widget.group,
         isPresentByStudentId: payload,
@@ -594,9 +628,15 @@ class _TeacherGroupAttendancePageState extends State<TeacherGroupAttendancePage>
       );
 
       if (!mounted) return;
+      
+      final absentCount = absentStudents.length;
+      final message = absentCount > 0
+          ? 'Attendance submitted. $absentCount student${absentCount == 1 ? '' : 's'} marked absent and notified.'
+          : 'Attendance submitted and saved to history.';
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Attendance submitted and saved to history.'),
+        SnackBar(
+          content: Text(message),
         ),
       );
       Navigator.of(context).pop();
@@ -627,6 +667,7 @@ class _StudentAttendanceRecord {
   final bool isExcluded;
   final String? exclusionStatus;
   final int? exclusionTotalAbsences;
+  int subjectAbsenceCount = 0;
 }
 
 class _StudentAttendanceItem extends StatefulWidget {
@@ -639,6 +680,7 @@ class _StudentAttendanceItem extends StatefulWidget {
     required this.totalAbsences,
     required this.enabled,
     required this.onStatusChanged,
+    this.subjectAbsenceCount = 0,
   });
 
   final StudentFeatureModel student;
@@ -648,6 +690,7 @@ class _StudentAttendanceItem extends StatefulWidget {
   final int? totalAbsences;
   final bool enabled;
   final ValueChanged<bool?> onStatusChanged;
+  final int subjectAbsenceCount;
 
   @override
   State<_StudentAttendanceItem> createState() => _StudentAttendanceItemState();
@@ -705,24 +748,65 @@ class _StudentAttendanceItemState extends State<_StudentAttendanceItem> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.student.fullName,
-                  style: TextStyle(
-                    color: widget.isExcluded
-                        ? const Color(0xFF6B7280)
-                        : const Color(0xFF101828),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.student.email,
-                  style: TextStyle(
-                    color: widget.isExcluded
-                        ? const Color(0xFF9CA3AF)
-                        : const Color(0xFF667085),
-                    fontSize: 12,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.student.fullName,
+                            style: TextStyle(
+                              color: widget.isExcluded
+                                  ? const Color(0xFF6B7280)
+                                  : const Color(0xFF101828),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.student.email,
+                            style: TextStyle(
+                              color: widget.isExcluded
+                                  ? const Color(0xFF9CA3AF)
+                                  : const Color(0xFF667085),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!widget.isExcluded && widget.subjectAbsenceCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEAE5),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.warning_rounded,
+                              size: 14,
+                              color: Color(0xFFD97706),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${widget.subjectAbsenceCount} absence${widget.subjectAbsenceCount == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                color: Color(0xFFD97706),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
                 if (widget.isExcluded) ...[
                   const SizedBox(height: 6),

@@ -4,8 +4,7 @@ import 'package:test/features/teachers/presentation/pages/teacher_attendance_gro
 import 'package:test/features/teachers/presentation/pages/teacher_attendance_history_page.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_profile_detail_page.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_subject_selection_page.dart';
-import 'package:test/services/department_auth_service.dart';
-import 'package:test/main.dart';
+import 'package:test/services/auth_service.dart';
 
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key, this.teacherId, this.teacherEmail});
@@ -21,17 +20,11 @@ class TeacherProfilePage extends StatefulWidget {
 
 class _TeacherProfilePageState extends State<TeacherProfilePage> {
   final TeachersFirestoreService _service = TeachersFirestoreService();
-  final DepartmentAuthService _authService = DepartmentAuthService();
   int _selectedNavIndex = 0;
   String _searchQuery = '';
 
   Future<void> _logout() async {
-    await _authService.signOut();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HodooriLoginScreen()),
-      (route) => false,
-    );
+    await AuthService.logout(context);
   }
 
   @override

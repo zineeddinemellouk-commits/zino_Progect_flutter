@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_attendance_groups_page.dart';
-import 'package:test/models/subject_model.dart';
+import 'package:test/core/constants/subject_model.dart';
 
 /// Step 2: Subject Selection Page
 /// Can be reached directly from "Start Session Now" or from level selection.

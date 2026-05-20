@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/features/students/services/attendance_service.dart';
 import 'package:test/features/students/presentation/widgets/subject_attendance_card.dart';
-import 'package:test/utils/app_theme.dart';
+import 'package:test/core/utils/app_theme.dart';
 
 class StudentAttendancePage extends StatefulWidget {
   const StudentAttendancePage({super.key});
@@ -43,7 +43,13 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
                       size: 32,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
+                  Image.asset(
+                    'assets/l10n/images/logo_hodori.png',
+                    height: 36,
+                    width: 36,
+                  ),
+                  const SizedBox(width: 12),
                   const Text(
                     'Attendance Overview',
                     style: TextStyle(
@@ -82,7 +88,13 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
                     size: 32,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                Image.asset(
+                  'assets/l10n/images/logo_hodori.png',
+                  height: 36,
+                  width: 36,
+                ),
+                const SizedBox(width: 12),
                 const Text(
                   'Attendance Overview',
                   style: TextStyle(
@@ -185,7 +197,7 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
                     'Your performance by subject',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey,
+                      color: Color.fromARGB(255, 29, 42, 144),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -216,3 +228,4 @@ class _StudentAttendancePageState extends State<StudentAttendancePage> {
     );
   }
 }
+

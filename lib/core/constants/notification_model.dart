@@ -4,6 +4,10 @@ enum NotificationType {
   absenceRecorded,
   justificationSubmitted,
   absenceExpired,
+  justificationAccepted,
+  justificationRefused,
+  exclusionApproved,
+  exclusionRejected,
   other,
 }
 
@@ -18,6 +22,7 @@ class NotificationModel {
     this.isRead = false,
     this.relatedAbsenceId,
     this.relatedJustificationId,
+    this.relatedExclusionId,
   });
 
   final String id;
@@ -29,6 +34,7 @@ class NotificationModel {
   final bool isRead;
   final String? relatedAbsenceId;
   final String? relatedJustificationId;
+  final String? relatedExclusionId;
 
   factory NotificationModel.fromMap(String id, Map<String, dynamic> map) {
     DateTime fromTimestamp(dynamic value) {
@@ -42,6 +48,10 @@ class NotificationModel {
       'absencerecorded' => NotificationType.absenceRecorded,
       'justificationsubmitted' => NotificationType.justificationSubmitted,
       'absenceexpired' => NotificationType.absenceExpired,
+      'justificationaccepted' => NotificationType.justificationAccepted,
+      'justificationrefused' => NotificationType.justificationRefused,
+      'exclusionapproved' => NotificationType.exclusionApproved,
+      'exclusionrejected' => NotificationType.exclusionRejected,
       _ => NotificationType.other,
     };
 
@@ -55,6 +65,7 @@ class NotificationModel {
       isRead: (map['isRead'] as bool?) ?? false,
       relatedAbsenceId: (map['relatedAbsenceId'] as String?)?.trim(),
       relatedJustificationId: (map['relatedJustificationId'] as String?)?.trim(),
+      relatedExclusionId: (map['relatedExclusionId'] as String?)?.trim(),
     );
   }
 
@@ -69,6 +80,7 @@ class NotificationModel {
       if (relatedAbsenceId != null) 'relatedAbsenceId': relatedAbsenceId,
       if (relatedJustificationId != null)
         'relatedJustificationId': relatedJustificationId,
+      if (relatedExclusionId != null) 'relatedExclusionId': relatedExclusionId,
     };
   }
 
@@ -82,6 +94,7 @@ class NotificationModel {
     bool? isRead,
     String? relatedAbsenceId,
     String? relatedJustificationId,
+    String? relatedExclusionId,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -94,6 +107,7 @@ class NotificationModel {
       relatedAbsenceId: relatedAbsenceId ?? this.relatedAbsenceId,
       relatedJustificationId:
           relatedJustificationId ?? this.relatedJustificationId,
+      relatedExclusionId: relatedExclusionId ?? this.relatedExclusionId,
     );
   }
 }

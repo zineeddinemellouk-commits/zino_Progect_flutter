@@ -4,6 +4,10 @@ enum NotificationFeatureType {
   absenceRecorded,
   justificationSubmitted,
   absenceExpired,
+  justificationAccepted,
+  justificationRefused,
+  exclusionApproved,
+  exclusionRejected,
   other,
 }
 
@@ -18,6 +22,7 @@ class NotificationFeatureModel {
     this.isRead = false,
     this.relatedAbsenceId,
     this.relatedJustificationId,
+    this.relatedExclusionId,
   });
 
   final String id;
@@ -29,6 +34,7 @@ class NotificationFeatureModel {
   final bool isRead;
   final String? relatedAbsenceId;
   final String? relatedJustificationId;
+  final String? relatedExclusionId;
 
   factory NotificationFeatureModel.fromMap(String id, Map<String, dynamic> map) {
     DateTime fromTimestamp(dynamic value) {
@@ -42,6 +48,10 @@ class NotificationFeatureModel {
       'absencerecorded' => NotificationFeatureType.absenceRecorded,
       'justificationsubmitted' => NotificationFeatureType.justificationSubmitted,
       'absenceexpired' => NotificationFeatureType.absenceExpired,
+      'justificationaccepted' => NotificationFeatureType.justificationAccepted,
+      'justificationrefused' => NotificationFeatureType.justificationRefused,
+      'exclusionapproved' => NotificationFeatureType.exclusionApproved,
+      'exclusionrejected' => NotificationFeatureType.exclusionRejected,
       _ => NotificationFeatureType.other,
     };
 
@@ -55,6 +65,7 @@ class NotificationFeatureModel {
       isRead: (map['isRead'] as bool?) ?? false,
       relatedAbsenceId: (map['relatedAbsenceId'] as String?)?.trim(),
       relatedJustificationId: (map['relatedJustificationId'] as String?)?.trim(),
+      relatedExclusionId: (map['relatedExclusionId'] as String?)?.trim(),
     );
   }
 
@@ -69,6 +80,7 @@ class NotificationFeatureModel {
       if (relatedAbsenceId != null) 'relatedAbsenceId': relatedAbsenceId,
       if (relatedJustificationId != null)
         'relatedJustificationId': relatedJustificationId,
+      if (relatedExclusionId != null) 'relatedExclusionId': relatedExclusionId,
     };
   }
 
@@ -82,6 +94,7 @@ class NotificationFeatureModel {
     bool? isRead,
     String? relatedAbsenceId,
     String? relatedJustificationId,
+    String? relatedExclusionId,
   }) {
     return NotificationFeatureModel(
       id: id ?? this.id,
@@ -94,6 +107,7 @@ class NotificationFeatureModel {
       relatedAbsenceId: relatedAbsenceId ?? this.relatedAbsenceId,
       relatedJustificationId:
           relatedJustificationId ?? this.relatedJustificationId,
+      relatedExclusionId: relatedExclusionId ?? this.relatedExclusionId,
     );
   }
 }

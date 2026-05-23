@@ -608,6 +608,7 @@ class StudentsFirestoreService {
     required String message,
     String? relatedAbsenceId,
     String? relatedJustificationId,
+    String? relatedExclusionId,
   }) async {
     final normalizedStudentId = studentId.trim();
     if (normalizedStudentId.isEmpty) {
@@ -627,6 +628,8 @@ class StudentsFirestoreService {
       if (relatedJustificationId != null &&
           relatedJustificationId.trim().isNotEmpty)
         'relatedJustificationId': relatedJustificationId.trim(),
+      if (relatedExclusionId != null && relatedExclusionId.trim().isNotEmpty)
+        'relatedExclusionId': relatedExclusionId.trim(),
     });
     return doc.id;
   }

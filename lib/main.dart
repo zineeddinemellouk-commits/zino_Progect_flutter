@@ -53,15 +53,16 @@ Future<void> main() async {
 }
 
 Widget _destinationForProfile(AppUserProfile profile) {
-  if (profile.role == 'Department') return const DepartmentDashboard();
-  if (profile.role == 'Student') {
+  final normalizedRole = profile.role.trim().toLowerCase();
+  if (normalizedRole == 'department') return const DepartmentDashboard();
+  if (normalizedRole == 'student') {
     return StudentsPage(
       selfViewOnly: true,
       studentDocumentId: profile.linkedDocumentId,
       studentEmail: profile.email,
     );
   }
-  if (profile.role == 'Teacher') {
+  if (normalizedRole == 'teacher') {
     return TeacherProfilePage(
       teacherId: profile.linkedDocumentId,
       teacherEmail: profile.email,
@@ -205,7 +206,19 @@ class _StartupGateState extends State<_StartupGate> {
     final supabase = Supabase.instance.client;
     final session = supabase.auth.currentSession;
     final firebaseUser = FirebaseAuth.instance.currentUser;
-    final uid = session?.user.id ?? firebaseUser?.uid;
+    final firebaseUid = firebaseUser?.uid ?? '';
+    final supabaseUid = session?.user.id.trim();
+    final uid = firebaseUid.isNotEmpty
+        ? firebaseUid
+        : supabaseUid;
+
+    if (firebaseUid.isNotEmpty &&
+        supabaseUid != null &&
+        supabaseUid.isNotEmpty &&
+        supabaseUid != firebaseUid) {
+      // Keep the Firebase session authoritative for role-based login.
+      unawaited(supabase.auth.signOut());
+    }
 
     if (!mounted) return;
 
@@ -230,7 +243,9 @@ class _StartupGateState extends State<_StartupGate> {
     final session = supabase.auth.currentSession;
     final firebaseUser = FirebaseAuth.instance.currentUser;
 
-    final uid = session?.user.id ?? firebaseUser?.uid;
+    final firebaseUid = firebaseUser?.uid ?? '';
+    final supabaseUid = session?.user.id.trim();
+    final uid = firebaseUid.isNotEmpty ? firebaseUid : supabaseUid;
     if (uid == null || uid.trim().isEmpty) {
       return null;
     }

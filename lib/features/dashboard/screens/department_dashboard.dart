@@ -139,9 +139,9 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                 stream: provider.watchTeachers(),
                 builder: (context, teachersSnapshot) {
                   final teachers = teachersSnapshot.data ?? const [];
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    
                     children: [
                       _buildInfoChip(_formatDate()),
                       _buildInfoChip('${overview.totalStudents} Students'),

@@ -9,7 +9,7 @@ import 'package:test/core/constants/level_model.dart';
 import 'package:test/core/constants/student_model.dart';
 import 'package:test/core/constants/subject_model.dart';
 import 'package:test/core/constants/teacher_model.dart';
-import 'package:test/services/absence_notification_service.dart';
+// AbsenceNotificationService not used here anymore; backend handles push delivery
 
 // ========================================
 // Firestore Service
@@ -581,7 +581,8 @@ class FirestoreService {
 
     await batch.commit();
 
-    // Create a notification for the student informing about the decision
+    // Create a notification document for the student; Cloud Functions will
+    // deliver the push based on this document and the student's stored tokens.
     try {
       if (studentId.isNotEmpty) {
         final isAccepted = normalizedStatus == 'accepted';
@@ -590,8 +591,11 @@ class FirestoreService {
             ? 'Your justification has been accepted.'
             : 'Your justification has been rejected.';
 
-        await _firestore.collection('notifications').doc().set({
+        await _firestore.collection('notifications').add({
           'studentId': studentId,
+          'receiverId': studentId,
+          'receiverType': 'student',
+          'senderId': '',
           'type': isAccepted ? 'justification_accepted' : 'justification_rejected',
           'title': title,
           'message': message,
@@ -599,18 +603,8 @@ class FirestoreService {
           'isRead': false,
           if (relatedAbsenceId != null) 'relatedAbsenceId': relatedAbsenceId,
           'relatedJustificationId': id,
+          'notificationSource': 'justification_update',
         });
-
-        // Also send a local push to the device if possible
-        try {
-          await AbsenceNotificationService().sendSimpleNotification(
-            title: title,
-            message: message,
-            payload: id,
-          );
-        } catch (e) {
-          print('[FirestoreService] Failed to send local notification: $e');
-        }
       }
     } catch (e) {
       print('[FirestoreService] Failed to create notification for justification update: $e');
@@ -655,7 +649,6 @@ class FirestoreService {
     final exclusionData = exclusionSnap.data() ?? const <String, dynamic>{};
     final studentId = (exclusionData['studentId'] as String?)?.trim() ?? '';
     final subjectName = (exclusionData['subjectName'] as String?)?.trim() ?? '';
-    final studentName = (exclusionData['studentName'] as String?)?.trim() ?? '';
 
     await exclusionRef.update({
       'status': normalizedStatus,
@@ -671,21 +664,19 @@ class FirestoreService {
         : 'Your exclusion for ${subjectName.isEmpty ? 'this subject' : subjectName} has been rejected.';
 
     try {
-      await _firestore.collection('notifications').doc().set({
+      await _firestore.collection('notifications').add({
         'studentId': studentId,
+        'receiverId': studentId,
+        'receiverType': 'student',
+        'senderId': '',
         'type': isApproved ? 'exclusion_approved' : 'exclusion_rejected',
         'title': title,
         'message': message,
         'createdAt': FieldValue.serverTimestamp(),
         'isRead': false,
         'relatedExclusionId': id,
+        'notificationSource': 'exclusion_update',
       });
-
-      await AbsenceNotificationService().sendSimpleNotification(
-        title: title,
-        message: studentName.isEmpty ? message : '$studentName, $message',
-        payload: id,
-      );
     } catch (e) {
       print('[FirestoreService] Failed to create exclusion decision notification: $e');
     }

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Role Home Screen
+// Routes authenticated users to the proper
+// role-specific area or shows role actions.
+// ========================================
+
 class RoleHomePage extends StatelessWidget {
   const RoleHomePage({
     super.key,

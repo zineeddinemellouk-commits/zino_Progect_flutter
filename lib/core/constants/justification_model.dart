@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Justification Model
+// Stores absence justification submissions,
+// review state, and supporting details.
+// ========================================
+
 class JustificationModel {
   const JustificationModel({
     required this.id,

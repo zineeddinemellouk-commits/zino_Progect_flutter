@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Absence Model
+// Represents a single recorded absence and
+// its linked justification and metadata.
+// ========================================
+
 class AbsenceModel {
   const AbsenceModel({
     required this.id,

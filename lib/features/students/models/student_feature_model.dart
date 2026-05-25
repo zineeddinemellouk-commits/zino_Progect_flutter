@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Student Feature Model
+// Rich student summary used by dashboard
+// views and attendance analytics.
+// ========================================
+
 class StudentFeatureModel {
   const StudentFeatureModel({
     required this.id,

@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_group_attendance_page.dart';
 
+// ========================================
+// Teacher Attendance Groups Page
+// Lists the groups available for a subject
+// before opening the attendance screen.
+// ========================================
+
 class TeacherAttendanceGroupsPage extends StatelessWidget {
   const TeacherAttendanceGroupsPage({
     super.key,

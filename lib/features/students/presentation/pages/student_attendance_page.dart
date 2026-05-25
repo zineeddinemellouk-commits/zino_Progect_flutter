@@ -4,6 +4,12 @@ import 'package:test/features/students/services/attendance_service.dart';
 import 'package:test/features/students/presentation/widgets/subject_attendance_card.dart';
 import 'package:test/core/utils/app_theme.dart';
 
+// ========================================
+// Student Attendance Page
+// Summarizes attendance by subject and
+// highlights performance trends.
+// ========================================
+
 class StudentAttendancePage extends StatefulWidget {
   const StudentAttendancePage({super.key});
 

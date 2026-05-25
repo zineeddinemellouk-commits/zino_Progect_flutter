@@ -7,6 +7,12 @@ import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/features/students/providers/student_management_provider.dart';
 import 'package:test/features/subjects/screens/edit_subject_screen.dart';
 
+// ========================================
+// View Subjects Screen
+// Displays all subjects with teacher and
+// class mappings plus edit controls.
+// ========================================
+
 class ViewSubjects extends StatefulWidget {
   const ViewSubjects({super.key});
 

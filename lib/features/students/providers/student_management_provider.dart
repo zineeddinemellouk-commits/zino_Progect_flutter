@@ -14,6 +14,12 @@ import 'package:test/services/department_auth_service.dart';
 import 'package:test/services/auth_service.dart';
 import 'package:test/services/firestore_service.dart';
 
+// ========================================
+// Student Management Provider
+// Coordinates Firestore reads/writes and
+// exposes the dashboard data streams.
+// ========================================
+
 /// Provider for managing student-related operations
 /// Handles CRUD operations and state management
 class StudentManagementProvider extends ChangeNotifier {

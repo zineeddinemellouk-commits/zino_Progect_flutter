@@ -6,6 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:test/services/role_manager.dart';
 import 'package:test/core/widgets/restart_widget.dart';
 
+// ========================================
+// Authentication Service
+// Manages sign-in, sign-out, profile sync,
+// and role-validated account operations.
+// ========================================
+
 /// Secure authentication service that integrates role-based access control
 /// This replaces the existing simple auth flow with a secure one
 class AuthService {
@@ -52,7 +58,7 @@ class AuthService {
   }
 
   /// Login user with email and password
-  /// This is the primary secure login flow
+  /// This is the primary secure login method that integrates with RoleManager
   Future<void> login({
     required String email,
     required String password,

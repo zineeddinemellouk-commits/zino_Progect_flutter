@@ -1,3 +1,9 @@
+// ========================================
+// Student Model
+// Represents a student record used across
+// lists, dashboards, and attendance flows.
+// ========================================
+
 class StudentModel {
   const StudentModel({
     required this.id,

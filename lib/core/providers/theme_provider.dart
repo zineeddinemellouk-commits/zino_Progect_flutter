@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ========================================
+// Theme Provider
+// Persists the selected light/dark/system
+// theme and notifies the UI on changes.
+// ========================================
+
 /// Global theme provider for managing app light/dark mode
 /// Persists theme preference to local storage
 class ThemeProvider extends ChangeNotifier {

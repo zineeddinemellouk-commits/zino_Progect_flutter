@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// Safe Navigation Helper
+// Provides mounted-safe navigation and
+// role-aware route handling utilities.
+// ========================================
+
 /// Result type for navigation operations
 class NavigationResult {
   const NavigationResult({

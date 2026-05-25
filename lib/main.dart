@@ -1,4 +1,9 @@
 // ignore_for_file: deprecated_member_use
+// ========================================
+// Application Entry Point
+// Boots Firebase, Supabase, localization,
+// notifications, and the authenticated app shell.
+// ========================================
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +18,7 @@ import 'package:test/core/constants/app_user_profile.dart';
 import 'package:test/core/providers/locale_provider.dart';
 import 'package:test/services/localization_service.dart';
 import 'package:test/services/absence_notification_service.dart';
+import 'package:test/services/push_notification_service.dart';
 import 'package:test/features/auth/screens/login_screen.dart';
 import 'package:test/core/widgets/restart_widget.dart';
 
@@ -28,6 +34,7 @@ import 'package:test/features/roles/screens/role_home_screen.dart';
 import 'package:test/services/department_auth_service.dart';
 import 'package:test/features/departments/screens/department_settings_screen.dart';
 
+// Initializes all platform services before the UI is rendered.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -35,8 +42,7 @@ Future<void> main() async {
   // Initialize Supabase
   await Supabase.initialize(
     url: 'https://ybpmzffutavfwcbfkjcq.supabase.co', // ← PASTE YOUR URL HERE
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicG16ZmZ1dGF2ZndjYmZramNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTYyMTMsImV4cCI6MjA5MjA5MjIxM30.7wB2kJww59dpgU751hzIyGE4R0SPPwatcH6Hx34fflU', // ← PASTE YOUR ANON KEY HERE
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicG16ZmZ1dGF2ZndjYmZramNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTYyMTMsImV4cCI6MjA5MjA5MjIxM30.7wB2kJww59dpgU751hzIyGE4R0SPPwatcH6Hx34fflU', // ← PASTE YOUR ANON KEY HERE
   );
 
   // Initialize localization service
@@ -44,6 +50,7 @@ Future<void> main() async {
 
   // Initialize notification service
   await AbsenceNotificationService().initialize();
+  await PushNotificationService().initialize();
 
   runApp(
     RestartWidget(
@@ -52,6 +59,7 @@ Future<void> main() async {
   );
 }
 
+// Resolves the first screen shown after the user profile is loaded.
 Widget _destinationForProfile(AppUserProfile profile) {
   if (profile.role == 'Department') return const DepartmentDashboard();
   if (profile.role == 'Student') {
@@ -74,6 +82,7 @@ Widget _destinationForProfile(AppUserProfile profile) {
   );
 }
 
+// Root widget that wires providers, theming, localization, and routing.
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -171,6 +180,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+// Auth/session gate that chooses the correct landing screen.
 class _StartupGate extends StatefulWidget {
   const _StartupGate();
 
@@ -178,6 +188,8 @@ class _StartupGate extends StatefulWidget {
   State<_StartupGate> createState() => _StartupGateState();
 }
 
+// Listens to Firebase and Supabase auth state changes and resolves the
+// linked user profile before routing to the correct role-based screen.
 class _StartupGateState extends State<_StartupGate> {
   StreamSubscription<User?>? _firebaseSubscription;
   StreamSubscription<AuthState>? _supabaseSubscription;
@@ -223,6 +235,8 @@ class _StartupGateState extends State<_StartupGate> {
         () => DepartmentAuthService().getUserProfileByUid(normalizedUid),
       );
     });
+
+    unawaited(PushNotificationService().registerCurrentUserToken());
   }
 
   Future<AppUserProfile?> _resolveProfile() async {

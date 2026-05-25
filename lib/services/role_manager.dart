@@ -2,6 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+// ========================================
+// Role Manager
+// Loads the authenticated user's role from
+// Firestore and exposes reactive role state.
+// ========================================
+
 /// Enum for user roles - single source of truth
 enum UserRole {
   student,

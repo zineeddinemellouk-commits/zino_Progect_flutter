@@ -6,6 +6,12 @@ import 'package:test/features/students/providers/student_management_provider.dar
 import 'package:test/features/students/screens/students_screen.dart';
 import 'package:test/features/teachers/widgets/hierarchy_item_card.dart';
 
+// ========================================
+// Groups Screen
+// Manages academic groups inside each level
+// and exposes CRUD actions for departments.
+// ========================================
+
 class GroupsScreen extends StatelessWidget {
   const GroupsScreen({super.key});
 

@@ -4,7 +4,12 @@ import 'package:test/features/teachers/models/teacher_feature_model.dart';
 import 'package:test/core/constants/group_model.dart';
 import 'package:test/core/constants/level_model.dart';
 import 'package:test/core/constants/subject_model.dart';
-import 'package:test/services/absence_notification_service.dart';
+
+// ========================================
+// Teacher Firestore Service
+// Loads teacher dashboards, attendance
+// history, and related classroom data.
+// ========================================
 
 class TeacherDashboardData {
   const TeacherDashboardData({
@@ -152,9 +157,6 @@ class TeachersFirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _exclusions =>
       _firestore.collection('exclusions');
-
-  CollectionReference<Map<String, dynamic>> get _notifications =>
-      _firestore.collection('notifications');
 
   Stream<TeacherDashboardData?> watchTeacherDashboard({
     String? teacherId,
@@ -463,8 +465,6 @@ class TeachersFirestoreService {
     final presentStudentIds = <String>[];
     final absentStudentIds = <String>[];
     final absentStudentsData = <Map<String, String>>[];
-    // Track absence IDs for notification linking
-    final absenceIdByStudentId = <String, String>{};
 
     for (final doc in studentDocs) {
       final studentDocId = doc.id;
@@ -512,22 +512,31 @@ class TeachersFirestoreService {
       } else {
         absentStudentIds.add(studentDocId);
         final studentName = (data['fullName'] as String?)?.trim() ?? 'Unknown';
+        final fcmToken = (data['fcmToken'] as String?)?.trim() ?? '';
+        final fcmTokens = (data['fcmTokens'] as List<dynamic>?)
+                ?.map((token) => token.toString().trim())
+                .where((token) => token.isNotEmpty)
+                .toList() ??
+            const <String>[];
         
         // Store absent student data for notifications
         absentStudentsData.add({
+          'studentId': authUid,
+          'studentDocId': studentDocId,
           'studentName': studentName,
+          'subjectId': resolvedSubjectId,
           'subjectName': resolvedSubjectName,
+          'groupId': group.groupId,
+          'groupName': group.groupName,
           'teacherName': teacherName,
+          'teacherId': normalizedTeacherId,
           'absenceId': '', // Will be updated with actual ID below
+          'fcmToken': fcmToken,
+          'fcmTokens': fcmTokens.join('|'),
         });
         
         final absenceRef = _absences.doc();
-        absenceIdByStudentId[studentDocId] = absenceRef.id;
-        
-        // Update the last added student's absenceId
-        if (absentStudentsData.isNotEmpty) {
-          absentStudentsData.last['absenceId'] = absenceRef.id;
-        }
+        absentStudentsData.last['absenceId'] = absenceRef.id;
         
         batch.set(absenceRef, {
           'studentId':
@@ -539,7 +548,9 @@ class TeachersFirestoreService {
           'subjectId': resolvedSubjectId,
           'subjectName': resolvedSubjectName,
           'groupId': group.groupId,
+          'groupName': group.groupName,
           'levelId': group.levelId,
+          'levelName': group.levelName,
           'createdAt': Timestamp.fromDate(now),
           'deadlineAt': Timestamp.fromDate(deadlineAt),
           'status': 'pending',
@@ -625,46 +636,6 @@ class TeachersFirestoreService {
     });
 
     await batch.commit();
-
-    // Send local push notifications
-    try {
-      await AbsenceNotificationService().sendAbsenceNotificationBatch(
-        absentStudents: absentStudentsData,
-      );
-    } catch (e) {
-      print('[TeachersFirestoreService] Error sending local notifications: $e');
-    }
-
-    // Create notifications for absent students with relatedAbsenceId link
-    print(
-      '[TeachersFirestoreService] Creating ${absentStudentIds.length} notifications for absent students',
-    );
-    for (final studentId in absentStudentIds) {
-      try {
-        final absenceId = absenceIdByStudentId[studentId];
-        print(
-          '[TeachersFirestoreService] Creating notification for student=$studentId, absenceId=$absenceId, subject=$resolvedSubjectName',
-        );
-
-        await _notifications.doc().set({
-          'studentId': studentId,
-          'type': 'absencerecorded',
-          'title': 'New Absence Recorded',
-          'message':
-              'You were marked absent in $resolvedSubjectName by $teacherName',
-          'createdAt': FieldValue.serverTimestamp(),
-          'isRead': false,
-          ...(absenceId == null
-              ? const <String, dynamic>{}
-              : <String, dynamic>{'relatedAbsenceId': absenceId}),
-        });
-      } catch (e) {
-        // Continue with other notifications even if one fails
-        print(
-          '[TeachersFirestoreService] Failed to create notification for student=$studentId: $e',
-        );
-      }
-    }
 
     print(
       '[TeachersFirestoreService] Attendance submitted: ${presentStudentIds.length} present, ${absentStudentIds.length} absent',

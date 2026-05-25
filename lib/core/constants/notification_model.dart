@@ -1,13 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Notification Model
+// Represents notification documents stored
+// for attendance and account events.
+// ========================================
+
 enum NotificationType {
   absenceRecorded,
   justificationSubmitted,
   absenceExpired,
-  justificationAccepted,
-  justificationRefused,
+  exclusionPending,
   exclusionApproved,
   exclusionRejected,
+  justificationAccepted,
+  justificationRejected,
   other,
 }
 
@@ -36,6 +43,24 @@ class NotificationModel {
   final String? relatedJustificationId;
   final String? relatedExclusionId;
 
+  static String _normalizeType(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  static NotificationType _typeFromString(String value) {
+    return switch (_normalizeType(value)) {
+      'absencerecorded' => NotificationType.absenceRecorded,
+      'justificationsubmitted' => NotificationType.justificationSubmitted,
+      'absenceexpired' => NotificationType.absenceExpired,
+      'exclusionpending' => NotificationType.exclusionPending,
+      'exclusionapproved' => NotificationType.exclusionApproved,
+      'exclusionrejected' => NotificationType.exclusionRejected,
+      'justificationaccepted' => NotificationType.justificationAccepted,
+      'justificationrejected' => NotificationType.justificationRejected,
+      _ => NotificationType.other,
+    };
+  }
+
   factory NotificationModel.fromMap(String id, Map<String, dynamic> map) {
     DateTime fromTimestamp(dynamic value) {
       if (value is Timestamp) return value.toDate();
@@ -43,17 +68,7 @@ class NotificationModel {
       return DateTime.now();
     }
 
-    final typeString = (map['type'] as String?)?.toLowerCase() ?? 'other';
-    final type = switch (typeString) {
-      'absencerecorded' => NotificationType.absenceRecorded,
-      'justificationsubmitted' => NotificationType.justificationSubmitted,
-      'absenceexpired' => NotificationType.absenceExpired,
-      'justificationaccepted' => NotificationType.justificationAccepted,
-      'justificationrefused' => NotificationType.justificationRefused,
-      'exclusionapproved' => NotificationType.exclusionApproved,
-      'exclusionrejected' => NotificationType.exclusionRejected,
-      _ => NotificationType.other,
-    };
+    final type = _typeFromString((map['type'] as String?) ?? 'other');
 
     return NotificationModel(
       id: id,

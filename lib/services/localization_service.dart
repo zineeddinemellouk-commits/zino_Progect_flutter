@@ -1,6 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 
+// ========================================
+// Localization Service
+// Loads JSON translation assets and keeps
+// language resources available at runtime.
+// ========================================
+
 /// Localization service for loading and managing translations
 class LocalizationService {
   static final LocalizationService _instance = LocalizationService._internal();

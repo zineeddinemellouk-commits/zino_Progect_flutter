@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Teacher Feature Model
+// Rich teacher summary used by dashboard
+// pages and attendance management screens.
+// ========================================
+
 class TeacherFeatureModel {
   const TeacherFeatureModel({
     required this.id,

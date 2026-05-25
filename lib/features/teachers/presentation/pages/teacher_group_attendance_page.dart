@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:test/features/students/models/student_feature_model.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 
+// ========================================
+// Teacher Group Attendance Page
+// Shows the student roster for a selected
+// group and captures attendance updates.
+// ========================================
+
 class TeacherGroupAttendancePage extends StatefulWidget {
   const TeacherGroupAttendancePage({
     super.key,

@@ -2,6 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum ExclusionStatus { pending, approved, rejected }
 
+// ========================================
+// Exclusion Model
+// Stores exclusion review data and status
+// for students with repeated absences.
+// ========================================
+
 class ExclusionModel {
   const ExclusionModel({
     required this.id,

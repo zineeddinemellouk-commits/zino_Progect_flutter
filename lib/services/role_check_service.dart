@@ -5,6 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// Role Check Service
+// Verifies role data and keeps protected
+// screens in sync with Firestore state.
+// ========================================
+
 /// Result type for role operations
 class RoleCheckResult {
   const RoleCheckResult({

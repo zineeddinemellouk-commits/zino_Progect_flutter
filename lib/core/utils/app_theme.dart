@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:test/core/constants/app_colors.dart';
 
+// ========================================
+// Legacy App Theme Wrapper
+// Keeps older screens aligned with the same
+// app palette while using shared colors.
+// ========================================
+
 /// Comprehensive app theme configuration for light and dark modes
 /// Includes Material 3 design with proper color schemes and component styling
 /// FIXED: Updated to use Poppins font instead of Inter

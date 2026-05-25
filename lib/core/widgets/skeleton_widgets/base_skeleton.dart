@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// Skeleton Loading Widgets
+// Standardized placeholders used while
+// content is loading from Firestore.
+// ========================================
+
 /// Configuration for skeleton loading UI
+/// Holds the shared sizes and colors used by all skeleton widgets.
 class SkeletonConfig {
   /// Enable skeleton loading
   static const bool enabled = true;
@@ -25,6 +32,7 @@ class SkeletonConfig {
 }
 
 /// Base class for creating skeleton loaders
+/// Switches between the real child and a skeleton placeholder.
 class BaseSkeleton extends StatelessWidget {
   final bool isLoading;
   final Widget child;
@@ -47,6 +55,7 @@ class BaseSkeleton extends StatelessWidget {
 }
 
 /// Reusable skeleton bone (placeholder element)
+/// Renders a shimmer-backed rectangle for text or cards.
 class SkeletonBone extends StatefulWidget {
   final double width;
   final double height;
@@ -68,6 +77,7 @@ class SkeletonBone extends StatefulWidget {
   State<SkeletonBone> createState() => _SkeletonBoneState();
 }
 
+// Manages the shimmer animation for rectangular placeholders.
 class _SkeletonBoneState extends State<SkeletonBone>
     with SingleTickerProviderStateMixin {
   late AnimationController _shimmerController;
@@ -125,6 +135,7 @@ class _SkeletonBoneState extends State<SkeletonBone>
 }
 
 /// Circular skeleton bone (for avatars, profile pictures)
+/// Renders a shimmering circular placeholder.
 class SkeletonCircle extends StatefulWidget {
   final double radius;
   final EdgeInsetsGeometry? margin;
@@ -139,6 +150,7 @@ class SkeletonCircle extends StatefulWidget {
   State<SkeletonCircle> createState() => _SkeletonCircleState();
 }
 
+// Manages the shimmer animation for circular placeholders.
 class _SkeletonCircleState extends State<SkeletonCircle>
     with SingleTickerProviderStateMixin {
   late AnimationController _shimmerController;
@@ -198,6 +210,7 @@ class _SkeletonCircleState extends State<SkeletonCircle>
 }
 
 /// Multi-line skeleton for text content
+/// Produces stacked skeleton rows to mimic text blocks.
 class SkeletonLine extends StatelessWidget {
   final int lineCount;
   final double? width;
@@ -235,6 +248,7 @@ class SkeletonLine extends StatelessWidget {
 }
 
 /// Extension for easy loading state management
+/// Adds a fluent helper for wrapping widgets with skeleton loading.
 extension SkeletonLoaderExt on Widget {
   Widget withSkeleton({
     required bool isLoading,

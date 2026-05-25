@@ -1,5 +1,11 @@
 import 'package:flutter/foundation.dart';
 
+// ========================================
+// Department Notification Provider
+// Manages in-memory notifications and UI
+// state for the department workspace.
+// ========================================
+
 /// Model for department notification
 class DepartmentNotification {
   final String id;

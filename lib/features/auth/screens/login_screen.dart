@@ -6,6 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:test/services/department_auth_service.dart';
 
+// ========================================
+// Login Screen
+// Handles user sign-in, credential checks,
+// and entry into the role-based app flow.
+// ========================================
+
 class HodooriLoginScreen extends StatefulWidget {
   const HodooriLoginScreen({super.key});
 

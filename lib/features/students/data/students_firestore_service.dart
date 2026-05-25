@@ -628,7 +628,8 @@ class StudentsFirestoreService {
       if (relatedJustificationId != null &&
           relatedJustificationId.trim().isNotEmpty)
         'relatedJustificationId': relatedJustificationId.trim(),
-      if (relatedExclusionId != null && relatedExclusionId.trim().isNotEmpty)
+      if (relatedExclusionId != null &&
+          relatedExclusionId.trim().isNotEmpty)
         'relatedExclusionId': relatedExclusionId.trim(),
     });
     return doc.id;

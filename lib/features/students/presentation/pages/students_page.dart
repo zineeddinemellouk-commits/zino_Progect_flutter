@@ -7,6 +7,12 @@ import 'package:test/features/students/presentation/pages/student_attendance_pag
 import 'package:test/features/students/presentation/pages/student_profile_page.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Students Home Page
+// Serves as the student-facing hub for
+// attendance, absences, and profile access.
+// ========================================
+
 extension AttendanceGrading on double {
   String get gradeLabel {
     if (this >= 0.8) return 'Excellent';

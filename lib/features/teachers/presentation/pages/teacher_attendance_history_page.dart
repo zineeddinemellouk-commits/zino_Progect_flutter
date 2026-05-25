@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 
+// ========================================
+// Teacher Attendance History Page
+// Displays recorded sessions so teachers
+// can review past attendance activity.
+// ========================================
+
 class TeacherAttendanceHistoryPage extends StatefulWidget {
   const TeacherAttendanceHistoryPage({
     super.key,

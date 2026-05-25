@@ -1,3 +1,9 @@
+// ========================================
+// App User Profile Model
+// Links authenticated accounts to their
+// role-specific database profile records.
+// ========================================
+
 class AppUserProfile {
   const AppUserProfile({
     required this.uid,

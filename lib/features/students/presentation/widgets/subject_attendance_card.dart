@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:test/features/students/services/attendance_service.dart';
 import 'package:test/core/utils/app_theme.dart';
 
+// ========================================
+// Subject Attendance Card
+// Summarizes attendance performance for a
+// single subject in the student view.
+// ========================================
+
 /// Reusable card widget for displaying subject attendance
 class SubjectAttendanceCard extends StatelessWidget {
   final SubjectAttendanceModel stats;

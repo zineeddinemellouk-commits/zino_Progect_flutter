@@ -16,16 +16,24 @@ import 'package:test/core/helpers/localization_helper.dart';
 import 'package:test/core/theme/app_theme.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Department Shared Widgets
+// Provides the department app bar, drawer,
+// and bottom navigation for main screens.
+// ========================================
+
 // FIXED: Added feature-specific color constants for menu item differentiation
 const Color _featureColorTeacher = Color(0xFF7C3AED); // Purple for teachers
 const Color _featureColorSubject = Color(0xFF059669); // Green for subjects
 const Color _featureColorExclude = Color(0xFFB54708); // Orange for exclusions
 const Color _featureColorAdmin = Color(0xFF6366F1); // Indigo for admin
 
+// Signs the user out and triggers a full app restart.
 Future<void> _logoutFromDepartment(BuildContext context) async {
   await AuthService.logout(context);
 }
 
+// Builds the branded department app bar used across department pages.
 PreferredSizeWidget departmentAppBar(
   BuildContext context,
   String title, {
@@ -85,6 +93,7 @@ PreferredSizeWidget departmentAppBar(
   );
 }
 
+// Builds the main navigation drawer with grouped routes and actions.
 Drawer departmentDrawer(BuildContext context) {
   final user = FirebaseAuth.instance.currentUser;
   final userEmail = user?.email ?? '';
@@ -360,6 +369,7 @@ Drawer departmentDrawer(BuildContext context) {
   );
 }
 
+// Renders a lightweight section heading inside the drawer.
 Widget _sectionLabel(BuildContext context, String label) {
   return Padding(
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
@@ -374,6 +384,7 @@ Widget _sectionLabel(BuildContext context, String label) {
   );
 }
 
+// Renders a single drawer destination with icon, label, and accent color.
 Widget _drawerIconItem(
   BuildContext context,
   IconData icon,
@@ -410,6 +421,7 @@ Widget _drawerIconItem(
   );
 }
 
+// Builds the bottom navigation bar for the department module.
 Widget departmentBottomNav(BuildContext context, int currentIndex) {
   return Container(
     decoration: BoxDecoration(

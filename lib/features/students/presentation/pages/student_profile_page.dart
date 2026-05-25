@@ -6,6 +6,12 @@ import 'package:test/services/firestore_service.dart';
 import 'package:test/core/constants/subject_model.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Student Profile Page
+// Shows the signed-in student’s profile and
+// linked academic information.
+// ========================================
+
 class StudentProfilePage extends StatefulWidget {
   const StudentProfilePage({super.key, this.studentId, this.studentEmail});
 

@@ -1,3 +1,9 @@
+// ========================================
+// Subject Model
+// Stores the subject name, assigned teacher,
+// and linked classes or groups.
+// ========================================
+
 class SubjectModel {
   const SubjectModel({
     required this.id,

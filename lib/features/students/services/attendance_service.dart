@@ -3,6 +3,12 @@ import 'package:test/core/constants/absence_model.dart';
 import 'package:test/core/constants/subject_model.dart';
 import 'package:test/core/constants/teacher_model.dart';
 
+// ========================================
+// Attendance Service
+// Builds subject-based attendance summaries
+// from Firestore records and absences.
+// ========================================
+
 /// Model for subject attendance statistics
 class SubjectAttendanceModel {
   final String subjectId;

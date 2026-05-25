@@ -2,6 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/core/constants/admin_model.dart';
 
+// ========================================
+// Admin Service
+// Manages admin-side Firestore operations
+// for elevated account and settings flows.
+// ========================================
+
 class AdminService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

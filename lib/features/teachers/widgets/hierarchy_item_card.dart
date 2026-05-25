@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// Hierarchy Item Card
+// Compact card used for level and group
+// navigation in the student browser flow.
+// ========================================
+
 class HierarchyItemCard extends StatelessWidget {
   const HierarchyItemCard({
     super.key,

@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// Role Protected Screen Helpers
+// Guards routes and widgets based on the
+// authenticated user's role state.
+// ========================================
+
 /// A base widget that enforces role-based access control
 /// 
 /// Usage:

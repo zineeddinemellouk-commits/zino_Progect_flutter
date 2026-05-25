@@ -1,6 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// User Repository
+// Fetches role-specific Firestore records
+// after the user role has been verified.
+// ========================================
+
 /// Repository for fetching role-specific user data
 /// This ensures that users only access data from their role's collection
 class UserRepository {

@@ -11,6 +11,12 @@ import 'package:test/core/constants/subject_model.dart';
 import 'package:test/core/constants/teacher_model.dart';
 import 'package:test/services/absence_notification_service.dart';
 
+// ========================================
+// Firestore Service
+// Centralizes database queries, streams,
+// seed data, and attendance aggregates.
+// ========================================
+
 class AttendanceOverviewStats {
   const AttendanceOverviewStats({
     required this.totalStudents,
@@ -47,8 +53,6 @@ class FirestoreService {
       _firestore.collection('absences');
   CollectionReference<Map<String, dynamic>> get _exclusions =>
       _firestore.collection('exclusions');
-    CollectionReference<Map<String, dynamic>> get _notifications =>
-      _firestore.collection('notifications');
 
   /// Aggregated attendance data for department dashboards.
   ///
@@ -528,18 +532,9 @@ class FirestoreService {
         justificationSnap.data() ?? const <String, dynamic>{};
     final absenceId = (justificationData['absenceId'] as String?)?.trim() ?? '';
     final studentId = (justificationData['studentId'] as String?)?.trim() ?? '';
-    final studentName =
-      (justificationData['studentName'] as String?)?.trim() ??
-      'Unknown Student';
-    final subjectName =
-      (justificationData['subjectName'] as String?)?.trim() ??
-      (justificationData['subject'] as String?)?.trim() ??
-      'the subject';
-    final teacherName =
-      (justificationData['teacherName'] as String?)?.trim() ??
-      'the teacher';
 
     final batch = _firestore.batch();
+    String? relatedAbsenceId = absenceId.isNotEmpty ? absenceId : null;
 
     batch.update(justificationRef, {
       'status': normalizedStatus,
@@ -586,36 +581,39 @@ class FirestoreService {
 
     await batch.commit();
 
-    if (studentId.isNotEmpty) {
-      final isAccepted = normalizedStatus == 'accepted';
+    // Create a notification for the student informing about the decision
+    try {
+      if (studentId.isNotEmpty) {
+        final isAccepted = normalizedStatus == 'accepted';
+        final title = isAccepted ? 'Justification Accepted' : 'Justification Rejected';
+        final message = isAccepted
+            ? 'Your justification has been accepted.'
+            : 'Your justification has been rejected.';
 
-      try {
-        await AbsenceNotificationService().sendJustificationStatusNotification(
-          studentName: studentName,
-          subjectName: subjectName,
-          teacherName: teacherName,
-          justificationId: id,
-          isAccepted: isAccepted,
-          refusalReason: refusalReason,
-        );
-      } catch (e) {
-        print('[FirestoreService] Error sending justification push: $e');
-      }
+        await _firestore.collection('notifications').doc().set({
+          'studentId': studentId,
+          'type': isAccepted ? 'justification_accepted' : 'justification_rejected',
+          'title': title,
+          'message': message,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+          if (relatedAbsenceId != null) 'relatedAbsenceId': relatedAbsenceId,
+          'relatedJustificationId': id,
+        });
 
-      try {
-        await _createStudentNotification(
-          studentId: studentId,
-          type: isAccepted ? 'justificationaccepted' : 'justificationrefused',
-          title: isAccepted ? 'Justification Accepted' : 'Justification Refused',
-          message: isAccepted
-              ? 'Your justification for $subjectName with $teacherName was accepted.'
-              : 'Your justification for $subjectName with $teacherName was refused.${refusalReason != null && refusalReason.trim().isNotEmpty ? ' Reason: ${refusalReason.trim()}' : ''}',
-          relatedAbsenceId: absenceId.isNotEmpty ? absenceId : null,
-          relatedJustificationId: id,
-        );
-      } catch (e) {
-        print('[FirestoreService] Error creating justification notification: $e');
+        // Also send a local push to the device if possible
+        try {
+          await AbsenceNotificationService().sendSimpleNotification(
+            title: title,
+            message: message,
+            payload: id,
+          );
+        } catch (e) {
+          print('[FirestoreService] Failed to send local notification: $e');
+        }
       }
+    } catch (e) {
+      print('[FirestoreService] Failed to create notification for justification update: $e');
     }
   }
 
@@ -656,15 +654,8 @@ class FirestoreService {
     final exclusionSnap = await exclusionRef.get();
     final exclusionData = exclusionSnap.data() ?? const <String, dynamic>{};
     final studentId = (exclusionData['studentId'] as String?)?.trim() ?? '';
-    final studentName =
-        (exclusionData['studentName'] as String?)?.trim() ??
-        'Unknown Student';
-    final subjectName =
-        (exclusionData['subjectName'] as String?)?.trim() ??
-        'the subject';
-    final teacherName =
-        (exclusionData['teacherName'] as String?)?.trim() ??
-        'the teacher';
+    final subjectName = (exclusionData['subjectName'] as String?)?.trim() ?? '';
+    final studentName = (exclusionData['studentName'] as String?)?.trim() ?? '';
 
     await exclusionRef.update({
       'status': normalizedStatus,
@@ -674,65 +665,30 @@ class FirestoreService {
     if (studentId.isEmpty) return;
 
     final isApproved = normalizedStatus == 'approved';
+    final title = isApproved ? 'Exclusion Approved' : 'Exclusion Rejected';
+    final message = isApproved
+        ? 'Your exclusion for ${subjectName.isEmpty ? 'this subject' : subjectName} has been approved.'
+        : 'Your exclusion for ${subjectName.isEmpty ? 'this subject' : subjectName} has been rejected.';
 
     try {
-      await AbsenceNotificationService().sendExclusionNotification(
-        studentName: studentName,
-        subjectName: subjectName,
-        teacherName: teacherName,
-        exclusionId: id,
-        isApproved: isApproved,
+      await _firestore.collection('notifications').doc().set({
+        'studentId': studentId,
+        'type': isApproved ? 'exclusion_approved' : 'exclusion_rejected',
+        'title': title,
+        'message': message,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'relatedExclusionId': id,
+      });
+
+      await AbsenceNotificationService().sendSimpleNotification(
+        title: title,
+        message: studentName.isEmpty ? message : '$studentName, $message',
+        payload: id,
       );
     } catch (e) {
-      print('[FirestoreService] Error sending exclusion push: $e');
+      print('[FirestoreService] Failed to create exclusion decision notification: $e');
     }
-
-    try {
-      await _createStudentNotification(
-        studentId: studentId,
-        type: isApproved ? 'exclusionapproved' : 'exclusionrejected',
-        title: isApproved ? 'Exclusion Approved' : 'Exclusion Rejected',
-        message: isApproved
-            ? 'You have been excluded from $subjectName with $teacherName.'
-            : 'The exclusion request for $subjectName with $teacherName was rejected.',
-        relatedExclusionId: id,
-      );
-    } catch (e) {
-      print('[FirestoreService] Error creating exclusion notification: $e');
-    }
-  }
-
-  Future<String> _createStudentNotification({
-    required String studentId,
-    required String type,
-    required String title,
-    required String message,
-    String? relatedAbsenceId,
-    String? relatedJustificationId,
-    String? relatedExclusionId,
-  }) async {
-    final normalizedStudentId = studentId.trim();
-    if (normalizedStudentId.isEmpty) {
-      throw Exception('Student ID is required');
-    }
-
-    final doc = _notifications.doc();
-    await doc.set({
-      'studentId': normalizedStudentId,
-      'type': type.toLowerCase(),
-      'title': title.trim(),
-      'message': message.trim(),
-      'createdAt': FieldValue.serverTimestamp(),
-      'isRead': false,
-      if (relatedAbsenceId != null && relatedAbsenceId.trim().isNotEmpty)
-        'relatedAbsenceId': relatedAbsenceId.trim(),
-      if (relatedJustificationId != null &&
-          relatedJustificationId.trim().isNotEmpty)
-        'relatedJustificationId': relatedJustificationId.trim(),
-      if (relatedExclusionId != null && relatedExclusionId.trim().isNotEmpty)
-        'relatedExclusionId': relatedExclusionId.trim(),
-    });
-    return doc.id;
   }
 
   Future<void> deleteJustification(String id) =>

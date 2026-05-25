@@ -10,6 +10,12 @@ import 'package:test/features/subjects/screens/add_subject_screen.dart';
 import 'package:test/features/teachers/screens/add_teacher_screen.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Department Dashboard
+// Summarizes attendance, counts, and quick
+// actions for department administrators.
+// ========================================
+
 // FIXED: Added feature-specific color constants
 const Color _featureColorStudent = AppTheme.lightPrimary; // Blue for students
 const Color _featureColorTeacher = Color(0xFF7C3AED); // Purple for teachers
@@ -26,6 +32,7 @@ class DepartmentDashboard extends StatefulWidget {
 class _DepartmentDashboardState extends State<DepartmentDashboard> {
   final String universityName = 'Ain Témouchent University - UBBAT';
 
+  // Loads base Firestore seed data once the dashboard is ready.
   @override
   void initState() {
     super.initState();
@@ -35,6 +42,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     });
   }
 
+  // Composes the dashboard view from live Firestore-backed streams.
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<StudentManagementProvider>();
@@ -62,6 +70,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     );
   }
 
+  // Top banner that presents the dashboard title and institution name.
   Widget _buildHeader(
     BuildContext context,
     StudentManagementProvider provider,
@@ -142,11 +151,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     
-                    children: [
-                      _buildInfoChip(_formatDate()),
-                      _buildInfoChip('${overview.totalStudents} Students'),
-                      _buildInfoChip('${teachers.length} Teachers'),
-                    ],
+                    
                   );
                 },
               );
@@ -157,6 +162,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     );
   }
 
+  // Quick count cards for the core dashboard metrics.
   Widget _buildQuickStats(
     BuildContext context,
     StudentManagementProvider provider,
@@ -206,6 +212,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     );
   }
 
+  // Attendance summary panel with progress and explanatory text.
   Widget _buildAttendanceOverview(
     BuildContext context,
     StudentManagementProvider provider,
@@ -327,6 +334,7 @@ class _DepartmentDashboardState extends State<DepartmentDashboard> {
     );
   }
 
+  // Shortcuts to common creation and review workflows.
   Widget _buildQuickActions(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

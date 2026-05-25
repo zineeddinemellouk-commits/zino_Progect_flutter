@@ -1,3 +1,9 @@
+// ========================================
+// Admin Model
+// Represents a department administrator
+// stored in the admin profile collection.
+// ========================================
+
 class AdminModel {
   final String id;
   final String name;

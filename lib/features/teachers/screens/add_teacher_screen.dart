@@ -7,6 +7,12 @@ import 'package:test/features/students/providers/student_management_provider.dar
 import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Add Teacher Screen
+// Captures teacher assignments and creates
+// the linked account and profile data.
+// ========================================
+
 class AddTeacher extends StatefulWidget {
   const AddTeacher({super.key});
 

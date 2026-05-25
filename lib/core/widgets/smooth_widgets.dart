@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// Smooth Widgets
+// Reusable animated UI components for soft
+// interactions, loading, and reveal effects.
+// ========================================
+
 /// Widget that provides smooth tap feedback with scale animation
+/// Wraps tappable content with a press-scale effect.
 class SmoothButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onPressed;
@@ -21,6 +28,7 @@ class SmoothButton extends StatefulWidget {
   State<SmoothButton> createState() => _SmoothButtonState();
 }
 
+// Controls the press animation state for `SmoothButton`.
 class _SmoothButtonState extends State<SmoothButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -75,6 +83,7 @@ class _SmoothButtonState extends State<SmoothButton>
 }
 
 /// Enhanced ListTile with tap feedback
+/// Adds subtle highlight feedback for menu-style rows.
 class SmoothListTile extends StatefulWidget {
   final Widget leading;
   final String title;
@@ -95,6 +104,7 @@ class SmoothListTile extends StatefulWidget {
   State<SmoothListTile> createState() => _SmoothListTileState();
 }
 
+// Manages the pressed/highlighted state for the list tile.
 class _SmoothListTileState extends State<SmoothListTile> {
   bool _isPressed = false;
 
@@ -155,6 +165,7 @@ class _SmoothListTileState extends State<SmoothListTile> {
 }
 
 /// Smooth loading overlay that fades in/out
+/// Covers the screen while data loads or actions run.
 class SmoothLoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final Widget child;
@@ -209,6 +220,7 @@ class SmoothLoadingOverlay extends StatelessWidget {
 }
 
 /// Animated expandable section
+/// Animates section reveal with a rotating expand icon.
 class SmoothExpandableSection extends StatefulWidget {
   final String title;
   final Widget content;
@@ -234,6 +246,7 @@ class SmoothExpandableSection extends StatefulWidget {
       _SmoothExpandableSectionState();
 }
 
+// Maintains expansion state and animation progress.
 class _SmoothExpandableSectionState extends State<SmoothExpandableSection>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -316,6 +329,7 @@ class _SmoothExpandableSectionState extends State<SmoothExpandableSection>
 }
 
 /// Animated fade transition for list items
+/// Fades and slides content into view after a small delay.
 class FadeInAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
@@ -332,6 +346,7 @@ class FadeInAnimation extends StatefulWidget {
   State<FadeInAnimation> createState() => _FadeInAnimationState();
 }
 
+// Drives the fade/slide entry animation.
 class _FadeInAnimationState extends State<FadeInAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;

@@ -7,6 +7,12 @@ import 'package:test/features/teachers/widgets/hierarchy_item_card.dart';
 import 'package:test/core/helpers/localization_helper.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// View Students Screen
+// Shows academic levels first, then drills
+// into groups and student records.
+// ========================================
+
 /// First hierarchy level screen: Levels (L1, L2, L3, M1, M2).
 class ViewStudent extends StatelessWidget {
   const ViewStudent({super.key});

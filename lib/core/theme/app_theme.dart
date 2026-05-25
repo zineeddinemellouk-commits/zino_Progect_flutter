@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// ========================================
+// App Theme
+// Centralizes the visual palette, spacing,
+// and typography for the whole application.
+// ========================================
+
 /// Comprehensive app theme configuration for light and dark modes
 /// Includes Material 3 design with proper color schemes and component styling
 class AppTheme {

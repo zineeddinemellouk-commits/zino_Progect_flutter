@@ -6,6 +6,12 @@ import 'package:test/features/teachers/presentation/pages/teacher_profile_detail
 import 'package:test/features/teachers/presentation/pages/teacher_subject_selection_page.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Teacher Profile Page
+// Serves as the teacher landing screen and
+// links to profile, sessions, and history.
+// ========================================
+
 class TeacherProfilePage extends StatefulWidget {
   const TeacherProfilePage({super.key, this.teacherId, this.teacherEmail});
 

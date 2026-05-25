@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ========================================
+// Locale Provider
+// Stores the active language, RTL state,
+// and supported locale configuration.
+// ========================================
+
 /// Global locale provider for managing app language and RTL support
 /// Supports: English, French, Arabic
 class LocaleProvider extends ChangeNotifier {

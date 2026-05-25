@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:test/core/constants/student_model.dart';
 
+// ========================================
+// Student Info Card
+// Displays a student summary with edit and
+// delete actions in list and detail views.
+// ========================================
+
 class StudentInfoCard extends StatelessWidget {
   const StudentInfoCard({
     super.key,

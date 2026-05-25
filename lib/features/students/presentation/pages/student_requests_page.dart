@@ -4,6 +4,12 @@ import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/features/students/presentation/pages/justification_page.dart';
 
+// ========================================
+// Student Requests Page
+// Lists absence requests and opens the
+// justification submission workflow.
+// ========================================
+
 class StudentRequestsPage extends StatefulWidget {
   const StudentRequestsPage({super.key});
 

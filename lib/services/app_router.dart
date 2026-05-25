@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// App Router
+// Centralized route helpers for navigating
+// between top-level application screens.
+// ========================================
+
 /// Centralized route guard system
 /// Intercepts all navigation and enforces role-based access control
 class AppRouter {

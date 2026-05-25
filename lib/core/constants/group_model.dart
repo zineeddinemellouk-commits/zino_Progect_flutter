@@ -1,3 +1,9 @@
+// ========================================
+// Group Model
+// Represents a cohort inside a level and
+// links students to attendance management.
+// ========================================
+
 class GroupModel {
   const GroupModel({
     required this.id,

@@ -3,6 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Teacher Profile Detail Page
+// Shows the selected teacher’s profile,
+// assignments, and related account details.
+// ========================================
+
 class TeacherProfileDetailPage extends StatefulWidget {
   const TeacherProfileDetailPage({
     super.key,

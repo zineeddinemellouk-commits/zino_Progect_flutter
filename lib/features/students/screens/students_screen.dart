@@ -7,6 +7,12 @@ import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/features/students/providers/student_management_provider.dart';
 import 'package:test/features/students/widgets/student_info_card.dart';
 
+// ========================================
+// Students Screen
+// Lists students for the selected level and
+// group, with edit and management actions.
+// ========================================
+
 class StudentsScreenArgs {
   const StudentsScreenArgs({required this.level, required this.group});
 

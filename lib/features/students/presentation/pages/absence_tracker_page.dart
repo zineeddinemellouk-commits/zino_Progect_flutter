@@ -5,6 +5,12 @@ import 'package:test/features/students/data/students_firestore_service.dart';
 import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/features/students/presentation/pages/justification_page.dart';
 
+// ========================================
+// Absence Tracker Page
+// Helps students review absences, filter
+// by status, and submit justifications.
+// ========================================
+
 enum JustificationFilter { all, pending, accepted, refused }
 
 class AbsenceTrackerPage extends StatefulWidget {

@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ========================================
+// Absence Feature Model
+// Represents a student absence request with
+// timing, status, and justification metadata.
+// ========================================
+
 enum AbsenceStatus { pending, justified, rejected }
 
 class AbsenceFeatureModel {

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// Restart Widget
+// Rebuilds the entire app tree after sign
+// out so session state is fully cleared.
+// ========================================
+
 class RestartWidget extends StatefulWidget {
   const RestartWidget({super.key, required this.child});
 

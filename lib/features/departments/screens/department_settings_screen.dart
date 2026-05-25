@@ -6,6 +6,12 @@ import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/core/helpers/localization_helper.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Department Settings Screen
+// Manages profile preferences and department
+// configuration for the logged-in admin.
+// ========================================
+
 class DepartmentSettingsPage extends StatefulWidget {
   const DepartmentSettingsPage({super.key});
 

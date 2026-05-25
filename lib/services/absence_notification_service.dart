@@ -1,6 +1,12 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 
+// ========================================
+// Absence Notification Service
+// Configures local reminders and absence
+// alerts triggered by attendance events.
+// ========================================
+
 class AbsenceNotificationService {
   static final AbsenceNotificationService _instance =
       AbsenceNotificationService._internal();
@@ -113,124 +119,6 @@ class AbsenceNotificationService {
     }
   }
 
-  Future<void> _showNotification({
-    required String channelId,
-    required String channelName,
-    required String channelDescription,
-    required String title,
-    required String body,
-    required int notificationId,
-    required String payload,
-  }) async {
-    final AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: channelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
-      autoCancel: true,
-      showWhen: true,
-    );
-
-    const DarwinNotificationDetails iosNotificationDetails =
-        DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    final NotificationDetails notificationDetails = NotificationDetails(
-      android: androidNotificationDetails,
-      iOS: iosNotificationDetails,
-    );
-
-    await _flutterLocalNotificationsPlugin.show(
-      notificationId,
-      title,
-      body,
-      notificationDetails,
-      payload: payload,
-    );
-  }
-
-  /// Send justification status notification to a student.
-  Future<void> sendJustificationStatusNotification({
-    required String studentName,
-    required String subjectName,
-    required String teacherName,
-    required String justificationId,
-    required bool isAccepted,
-    String? refusalReason,
-  }) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
-
-    try {
-      final title = isAccepted
-          ? 'Justification Accepted'
-          : 'Justification Refused';
-      final body = isAccepted
-          ? 'Your justification for $subjectName with $teacherName was accepted.'
-          : 'Your justification for $subjectName with $teacherName was refused.';
-      final fullBody = (refusalReason != null && refusalReason.trim().isNotEmpty)
-          ? '$body Reason: ${refusalReason.trim()}'
-          : body;
-
-      await _showNotification(
-        channelId: 'justification_channel_id',
-        channelName: 'Justification Notifications',
-        channelDescription:
-            'Notifications for justification approvals and refusals',
-        title: title,
-        body: fullBody,
-        notificationId: justificationId.hashCode % 100000,
-        payload: justificationId,
-      );
-
-      debugPrint(
-        'Justification notification sent to $studentName for $subjectName',
-      );
-    } catch (e) {
-      debugPrint('Error sending justification notification: $e');
-    }
-  }
-
-  /// Send exclusion status notification to a student.
-  Future<void> sendExclusionNotification({
-    required String studentName,
-    required String subjectName,
-    required String teacherName,
-    required String exclusionId,
-    required bool isApproved,
-  }) async {
-    if (!_isInitialized) {
-      await initialize();
-    }
-
-    try {
-      final title = isApproved ? 'Exclusion Approved' : 'Exclusion Rejected';
-      final body = isApproved
-          ? 'You have been excluded from $subjectName with $teacherName.'
-          : 'The exclusion request for $subjectName with $teacherName was rejected.';
-
-      await _showNotification(
-        channelId: 'exclusion_channel_id',
-        channelName: 'Exclusion Notifications',
-        channelDescription: 'Notifications for subject exclusion decisions',
-        title: title,
-        body: body,
-        notificationId: exclusionId.hashCode % 100000,
-        payload: exclusionId,
-      );
-
-      debugPrint('Exclusion notification sent to $studentName for $subjectName');
-    } catch (e) {
-      debugPrint('Error sending exclusion notification: $e');
-    }
-  }
-
   /// Send batch notifications for multiple absent students
   Future<void> sendAbsenceNotificationBatch({
     required List<Map<String, String>> absentStudents,
@@ -257,6 +145,55 @@ class AbsenceNotificationService {
 
       // Add small delay between notifications to avoid overwhelming
       await Future.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  /// Send a simple generic notification (title/message) optionally with payload
+  Future<void> sendSimpleNotification({
+    required String title,
+    required String message,
+    String? payload,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    try {
+      final AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+        'general_channel_id',
+        'General Notifications',
+        channelDescription: 'General app notifications',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+        autoCancel: true,
+      );
+
+      const DarwinNotificationDetails iosNotificationDetails =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+        iOS: iosNotificationDetails,
+      );
+
+      final int notificationId = (payload ?? DateTime.now().toIso8601String()).hashCode % 100000;
+
+      await _flutterLocalNotificationsPlugin.show(
+        notificationId,
+        title,
+        message,
+        notificationDetails,
+        payload: payload,
+      );
+
+      debugPrint('Simple notification sent: $title - $message');
+    } catch (e) {
+      debugPrint('Error sending simple notification: $e');
     }
   }
 

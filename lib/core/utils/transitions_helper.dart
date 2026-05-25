@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// Transition Helpers
+// Provides consistent page and dialog
+// animations for navigation flows.
+// ========================================
+
 /// Smooth page transitions utility
 class SmoothTransitions {
   /// Duration for all transitions (250ms - smooth but not slow)

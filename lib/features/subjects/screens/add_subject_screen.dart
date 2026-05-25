@@ -7,6 +7,12 @@ import 'package:test/features/students/providers/student_management_provider.dar
 import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Add Subject Screen
+// Creates a subject and links it to the
+// assigned teachers and class groups.
+// ========================================
+
 class AddSubject extends StatefulWidget {
   const AddSubject({super.key});
 

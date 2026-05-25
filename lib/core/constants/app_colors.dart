@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+// ========================================
+// App Colors
+// Shared color palette used by the legacy
+// theme wrapper and presentation widgets.
+// ========================================
+
 /// Application color palette for light and dark themes
 /// Extracted from AppTheme for modular use
 class AppColors {

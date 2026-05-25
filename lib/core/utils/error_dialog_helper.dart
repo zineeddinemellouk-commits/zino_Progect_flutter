@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// ========================================
+// Error Dialog Helper
+// Converts technical failures into clear,
+// user-facing dialogs and snackbars.
+// ========================================
+
 /// Reusable error dialog helper for consistent error handling across the app
 class ErrorDialogHelper {
   /// Show a professional error dialog to the user

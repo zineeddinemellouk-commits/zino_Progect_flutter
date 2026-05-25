@@ -4,6 +4,12 @@ import 'package:test/core/constants/exclusion_model.dart';
 import 'package:test/features/students/providers/student_management_provider.dart';
 import 'package:test/features/departments/widgets/common_widgets.dart';
 
+// ========================================
+// Exclusion Review Screen
+// Displays students flagged for exclusion
+// and supports review or follow-up actions.
+// ========================================
+
 class ViewExclude extends StatefulWidget {
   const ViewExclude({super.key});
 

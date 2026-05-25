@@ -5,6 +5,12 @@ import 'package:test/firebase_options.dart';
 import 'package:test/core/constants/app_user_profile.dart';
 import 'package:test/services/auth_service.dart';
 
+// ========================================
+// Department Authentication Service
+// Creates and validates managed accounts,
+// then links them to profile documents.
+// ========================================
+
 class DepartmentAuthService {
   DepartmentAuthService({FirebaseFirestore? firestore})
     : _firestore = firestore ?? FirebaseFirestore.instance;

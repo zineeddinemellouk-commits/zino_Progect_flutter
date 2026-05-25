@@ -4,6 +4,12 @@ import 'package:test/core/constants/teacher_model.dart';
 import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/features/students/providers/student_management_provider.dart';
 
+// ========================================
+// Edit Subject Screen
+// Updates subject details and reassignment
+// settings for the selected subject.
+// ========================================
+
 class EditSubjectPage extends StatefulWidget {
   const EditSubjectPage({super.key, required this.subjectId});
 

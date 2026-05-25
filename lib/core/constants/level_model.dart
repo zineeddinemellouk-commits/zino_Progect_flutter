@@ -1,3 +1,9 @@
+// ========================================
+// Level Model
+// Represents an academic level such as L1,
+// L2, L3, M1, or M2.
+// ========================================
+
 class LevelModel {
   const LevelModel({required this.id, required this.name});
 

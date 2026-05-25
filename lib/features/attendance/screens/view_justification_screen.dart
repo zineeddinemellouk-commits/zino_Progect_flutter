@@ -6,6 +6,12 @@ import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/core/helpers/localization_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// ========================================
+// Justification Review Screen
+// Lets department users inspect, approve,
+// and manage submitted absence justifications.
+// ========================================
+
 class VewJustification extends StatefulWidget {
   const VewJustification({super.key});
 

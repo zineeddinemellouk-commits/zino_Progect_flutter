@@ -1,3 +1,9 @@
+// ========================================
+// Teacher Model
+// Represents teacher assignments, linked
+// subjects, levels, and group ownership.
+// ========================================
+
 class TeacherModel {
   const TeacherModel({
     required this.id,

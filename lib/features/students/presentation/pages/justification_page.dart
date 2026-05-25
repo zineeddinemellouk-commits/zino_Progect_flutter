@@ -8,6 +8,12 @@ import 'package:test/features/students/models/absence_feature_model.dart';
 import 'package:test/core/helpers/localization_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// ========================================
+// Justification Submission Page
+// Lets a student attach evidence and submit
+// a justification for an absence record.
+// ========================================
+
 class JustificationPage extends StatefulWidget {
   const JustificationPage({required this.absence, super.key});
 

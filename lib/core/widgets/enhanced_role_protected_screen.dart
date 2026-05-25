@@ -5,6 +5,12 @@ import 'package:test/services/role_check_service.dart';
 import 'package:test/services/safe_navigation_helper.dart';
 import 'package:test/core/utils/error_feedback_helper.dart';
 
+// ========================================
+// Enhanced Role Protected Screen
+// Adds improved loading, error, and access
+// handling around role-gated screens.
+// ========================================
+
 /// Enhanced version of RoleProtectedScreen with improved error handling
 /// This version automatically handles loading states, errors, and redirects
 ///

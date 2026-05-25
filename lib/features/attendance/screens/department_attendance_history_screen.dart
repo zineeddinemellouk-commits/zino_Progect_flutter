@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Department Attendance History Screen
+// Shows historical attendance sessions for
+// department-level analysis and audits.
+// ========================================
+
 class DepartmentAttendanceHistoryScreen extends StatefulWidget {
   const DepartmentAttendanceHistoryScreen({super.key});
 

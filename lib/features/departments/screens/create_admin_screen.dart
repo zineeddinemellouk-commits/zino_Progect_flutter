@@ -3,6 +3,12 @@ import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/services/admin_service.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Create Admin Screen
+// Collects department admin details and
+// creates the associated Firestore account.
+// ========================================
+
 class CreateAdminScreen extends StatefulWidget {
   const CreateAdminScreen({super.key});
 

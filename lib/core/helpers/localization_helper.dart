@@ -3,6 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:test/core/providers/locale_provider.dart';
 import 'package:test/services/localization_service.dart';
 
+// ========================================
+// Localization Helper
+// Adds easy translation lookup extensions
+// for widgets and build contexts.
+// ========================================
+
 /// Extension for easy access to translations throughout the app
 /// Usage: context.tr('key') or context.tr('section.key')
 extension LocalizationExtension on BuildContext {

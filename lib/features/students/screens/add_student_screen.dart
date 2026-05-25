@@ -6,6 +6,12 @@ import 'package:test/features/students/providers/student_management_provider.dar
 import 'package:test/features/departments/widgets/common_widgets.dart';
 import 'package:test/core/theme/app_theme.dart';
 
+// ========================================
+// Add Student Screen
+// Collects student details and creates the
+// linked auth and Firestore records.
+// ========================================
+
 class AddStudent extends StatefulWidget {
   const AddStudent({super.key});
 

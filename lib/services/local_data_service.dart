@@ -2,6 +2,12 @@ import 'package:test/core/constants/group_model.dart';
 import 'package:test/core/constants/level_model.dart';
 import 'package:test/core/constants/student_model.dart';
 
+// ========================================
+// Local Data Service
+// In-memory fallback data source used when
+// the app runs without the database layer.
+// ========================================
+
 /// In-memory placeholder data source used after database removal.
 class LocalDataService {
   final List<LevelModel> _levels = const [

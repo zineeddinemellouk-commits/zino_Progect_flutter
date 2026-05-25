@@ -1,3 +1,9 @@
+// ========================================
+// Class Model
+// Represents a class/grouping inside an
+// academic level for attendance flows.
+// ========================================
+
 class ClassModel {
   const ClassModel({
     required this.id,

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:test/services/role_manager.dart';
 
+// ========================================
+// Error Feedback Helper
+// Centralized snackbars and dialogs for
+// success, warning, info, and access errors.
+// ========================================
+
 /// Error feedback UI helper
 /// Provides consistent, user-friendly error messages via SnackBar, Dialog, or pages
 class ErrorFeedbackHelper {

@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:test/features/teachers/data/teachers_firestore_service.dart';
 import 'package:test/features/teachers/presentation/pages/teacher_subject_selection_page.dart';
 
+// ========================================
+// Teacher Level Selection Page
+// Filters the teacher flow by academic level
+// before moving to group selection.
+// ========================================
+
 /// Step 1: Level Selection Page
 /// Shows all levels the teacher teaches in a grid/list format.
 /// Each card displays level name, module count, and group count.
